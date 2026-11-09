@@ -4,6 +4,7 @@ Usage:
     uv run python -m training.inspect_samples                    # 60 lines, all fonts
     uv run python -m training.inspect_samples -n 200 --seed 3
     uv run python -m training.inspect_samples --each-font        # one line per font file
+    uv run python -m training.inspect_samples -n 200 --augment   # as the model will see them
 
 Open data/inspect/index.html in a browser. Each row shows the rendered image and,
 next to it, the label as text drawn by the browser (a different shaping engine), so
@@ -20,8 +21,10 @@ import io
 import random
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
 
+from training.augment import augment
 from training.fonts import FontPicker, load_fonts
 from training.render import render_line
 from training.text import LineSampler, SamplerConfig, clean_text
@@ -31,9 +34,10 @@ SAMPLE_TEXT = ROOT / "training" / "samples" / "sample_text.txt"
 OUT_DIR = ROOT / "data" / "inspect"
 
 
-def png_data_uri(ink) -> str:
+def png_data_uri(gray) -> str:
+    """Embed a grayscale image (white = 255) in the page."""
     buf = io.BytesIO()
-    Image.fromarray(255 - ink).save(buf, format="PNG")  # black ink on white paper
+    Image.fromarray(gray).save(buf, format="PNG")
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
 
 
@@ -66,10 +70,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("-n", type=int, default=60, help="number of lines")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--each-font", action="store_true", help="one line per font file")
+    parser.add_argument("--augment", action="store_true", help="apply training augmentation")
     parser.add_argument("--text", type=Path, default=SAMPLE_TEXT, help="UTF-8 text file")
     args = parser.parse_args(argv)
 
     rng = random.Random(args.seed)
+    np_rng = np.random.default_rng(args.seed)
     segments = clean_text(args.text.read_text(encoding="utf-8"))
     sampler = LineSampler(SamplerConfig(), seed=args.seed)
     fonts = load_fonts()
@@ -87,10 +93,11 @@ def main(argv: list[str] | None = None) -> int:
             continue
         size = rng.randint(24, 64)
         ink = render_line(line, chosen.path, size_px=size)
+        image = augment(ink, np_rng) if args.augment else 255 - ink  # black ink on white
         rows.append(
             ROW.format(
                 n=len(rows) + 1,
-                src=png_data_uri(ink),
+                src=png_data_uri(image),
                 label=html.escape(line),
                 font=html.escape(f"{chosen.family} — {chosen.path.name}"),
                 size=size,

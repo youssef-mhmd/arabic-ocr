@@ -2,7 +2,7 @@
 
 A recognizer learns from pairs of **(image, label)**: a picture of a text line and the exact text it shows. This note explains how we define the possible characters, how we make labels consistent, and (as M1 continues) how we generate millions of images.
 
-*Status: sections 1–5 are written. Augmentation and dataset files will be added as those parts of M1 land.*
+*Status: sections 1–6 are written. Dataset files will be added when that part of M1 lands.*
 
 ---
 
@@ -114,4 +114,38 @@ The output is an **ink image**: 0 = no ink, 255 = full ink. Turning that into re
 
 ---
 
-*Next sections (coming in M1): augmentation and dataset files.*
+## 6. Augmentation: teaching the model about messy reality
+
+Our rendered lines are perfect: pure black on pure white, razor-sharp. Real inputs aren't: scans are tilted and grainy, photocopies are faded, screenshots are JPEG-compressed, dark mode inverts the colours. A model that has only ever seen perfect images learns details that exist only in perfect images, then fails on real ones. This gap between training data and real data is the **domain gap**, the biggest risk in this project (PRD §14).
+
+**Augmentation** closes the gap. Every training image gets a random mix of realistic damage, so the model is forced to learn what stays the same through all of it: the letter shapes. Because the damage is random, the same text line looks different every time, which also fights **overfitting** (memorizing).
+
+`training/augment.py` picks one of two modes per image:
+
+| Mode | Share | Effects |
+|---|---|---|
+| **Print / scan** | 65% | paper texture and stains; thicker (ink bleed) or thinner strokes; slight rotation, slant and perspective; faded ink; uneven lighting (shadows) |
+| **Screen** | 35% | flat or gradient background; 25% dark mode (light text on dark); table/input border lines; little noise |
+
+Then both modes may get: low resolution (shrink and re-enlarge), blur, noise, and JPEG compression. Extra random margins are added around the text, because the text detector's crops won't be pixel-exact either.
+
+### The golden rule: never break the label
+Augmentation is only useful if the label is still true for the damaged image. So:
+
+- **Never flip or mirror.** A mirrored Arabic word is not the same word.
+- **Never cut into the text.** Rotation, slant and perspective enlarge the canvas instead.
+- **Keep enough contrast.** Text and background are always at least 90 gray levels apart, about a 3:1 contrast ratio, the minimum for readable text in accessibility guidelines.
+- **Don't destroy dots and diacritics.** Looking at samples showed that stacking *every* effect on small text turned `السعر` into a smudge. In Arabic, dots are the only difference between ب ت ث ن ي, so an image where they've vanished teaches the model to guess. The fixes:
+  - at most 3 lighting/quality effects per image;
+  - blur strength scales with the text size;
+  - low resolution never shrinks text below 20 pixels tall.
+
+Tuning augmentation is a balance. Too weak and the model is fragile on real images; too strong and it trains on images even a human couldn't read, which wastes effort and teaches guessing. The only way to judge is to **look**:
+
+```
+uv run python -m training.inspect_samples -n 200 --augment
+```
+
+---
+
+*Next section (coming in M1): dataset files.*
