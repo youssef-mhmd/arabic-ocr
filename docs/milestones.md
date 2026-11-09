@@ -41,6 +41,8 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Exit criteria:** 1M+ line images generated; a manual check of 200 random samples shows correct shaping and diacritics, with labels matching the images.
 
+✅ **Met 2026-11-09.** Dataset `v1`: 1,000,000 train / 10,000 val / 10,000 test line images (`training/configs/data_v1.yaml`); `training/check_dataset.py` passes on every sample. The owner's manual review of 200 random samples (plus 100 number lines) found one bug (fonts that swap digit shapes during shaping), which was fixed and the dataset regenerated before sign-off.
+
 ---
 
 ## M2: Line recognizer ⚡
