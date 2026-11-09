@@ -298,6 +298,6 @@ arabic-ocr/
 
 ## 15. Open questions
 1. ~~Final project name~~: decided, **arabic-ocr** (Python import name `arabic_ocr`).
-2. **Training hardware:** start with free Kaggle/Colab, or rent cloud GPUs? This can be decided at phase 2; phases 0–1 need no GPU.
+2. ~~**Training hardware**~~: decided 2026-11-09 (M2). Train **locally** on the owner's laptop: NVIDIA RTX 5060 Laptop GPU (8 GB, Blackwell), Ryzen 7 (16 threads), 31 GB RAM. It is likely faster than free Kaggle/Colab GPUs, has no session limits, and the 11 GB dataset is already on disk. PyTorch comes from the CUDA 13.2 index (`[tool.uv.sources]` in `pyproject.toml`). Kaggle/Colab remain a fallback.
 3. Do you have your own scanned Arabic documents to use as a real test set?
 4. GUI language: Arabic + English from v1, or English first?

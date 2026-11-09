@@ -10,7 +10,7 @@ Requires [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync                      # install runtime + dev + data-generation dependencies
-uv sync --group train        # + training dependencies (PyTorch; not available on Intel Macs)
+uv sync --group train        # + training dependencies (CUDA PyTorch ~3 GB; NVIDIA driver for CUDA 13.2+; not on Intel Macs)
 uv run python -m training.download_fonts    # download the training fonts (~27 MB)
 uv run python -m training.inspect_samples   # render sample lines to data/inspect/index.html
 uv run python -m training.corpora download && uv run python -m training.corpora prepare

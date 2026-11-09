@@ -41,8 +41,9 @@ data = [
     "pyyaml>=6.0.3",
     "uharfbuzz>=0.57.0",
 ]
-# Training only (GPU machines: Kaggle/Colab/Linux/Windows). torch has no macOS Intel
-# wheels for Python 3.13, so `uv sync --group train` does not work on Intel Macs.
+# Training only (a machine with an NVIDIA GPU: the owner's RTX 5060 laptop, or
+# Kaggle/Colab/Linux). torch has no macOS Intel wheels for Python 3.13, so
+# `uv sync --group train` does not work on Intel Macs.
 train = [
     { include-group = "data" },
     "torch>=2.15.0",
@@ -51,6 +52,18 @@ train = [
 [tool.uv]
 # `uv sync` installs these groups unless told otherwise.
 default-groups = ["dev", "data"]
+
+# PyTorch from PyPI is CPU-only on Windows. Training needs the CUDA build, which
+# PyTorch publishes on its own index. cu132 (CUDA 13.2) supports RTX 50-series
+# (Blackwell) GPUs and needs an NVIDIA driver that supports CUDA 13.2 or newer.
+# macOS keeps the normal PyPI build (it uses Apple's GPU through "MPS" instead).
+[[tool.uv.index]]
+name = "pytorch-cu132"
+url = "https://download.pytorch.org/whl/cu132"
+explicit = true  # only used for the packages listed below
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu132", marker = "sys_platform == 'win32' or sys_platform == 'linux'" }]
 
 [tool.ruff]
 line-length = 100

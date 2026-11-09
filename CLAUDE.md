@@ -21,7 +21,8 @@ arabic-ocr is an Arabic-script OCR engine built from scratch: we design and trai
 ## Commands
 ```bash
 uv sync                      # install deps (runtime + dev + data generation)
-uv sync --group train        # + training deps (torch)
+uv sync --group train        # + training deps (CUDA PyTorch, ~3 GB; see [tool.uv.sources])
+uv run --group train python -m training.<script>   # anything that imports torch
 uv run python -m training.download_fonts      # fetch training fonts into data/fonts/
 uv run python -m training.inspect_samples     # render samples -> data/inspect/index.html
 uv run python -m training.corpora download && uv run python -m training.corpora prepare

@@ -20,7 +20,6 @@ in logical order.
 from __future__ import annotations
 
 import functools
-import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,72 +27,15 @@ import freetype
 import numpy as np
 import uharfbuzz as hb
 
+from arabic_ocr.bidi import ltr_mask
+
 
 class MissingGlyphError(ValueError):
     """The font has no glyph for a character in the text."""
 
 
-# ---------------------------------------------------------------------------
-# Bidi: which characters are drawn left-to-right inside a right-to-left line
-# ---------------------------------------------------------------------------
-#
-# This is the Unicode Bidirectional Algorithm (UAX #9), reduced to what our charset
-# can contain: a right-to-left paragraph, Arabic letters (type AL), no Latin letters
-# (no type L), and no explicit direction controls. Under those conditions the full
-# algorithm gives exactly this result:
-#   - numbers end up left-to-right (level 2); everything else right-to-left (level 1).
-# The W-rules below decide which characters count as part of a number.
-
-
-def _bidi_type(ch: str) -> str:
-    return unicodedata.bidirectional(ch) or "ON"
-
-
-def ltr_mask(text: str) -> list[bool]:
-    """For each character, True if it is drawn left-to-right (part of a number)."""
-    types = [_bidi_type(c) for c in text]
-    n = len(types)
-
-    # W1: a combining mark takes the type of the character before it.
-    for i, t in enumerate(types):
-        if t == "NSM":
-            types[i] = types[i - 1] if i > 0 else "R"
-
-    # W2: a European number after Arabic letters becomes an Arabic number.
-    # W3: Arabic letters (AL) are then treated as plain right-to-left (R).
-    last_strong = "R"  # start of a right-to-left paragraph
-    for i, t in enumerate(types):
-        if t in ("R", "L", "AL"):
-            last_strong = t
-        elif t == "EN" and last_strong == "AL":
-            types[i] = "AN"
-    types = ["R" if t == "AL" else t for t in types]
-
-    # W4: one separator between two numbers of the same kind joins them.
-    #     + and - (ES) join only European numbers; , . : / (CS) join either kind.
-    for i in range(1, n - 1):
-        left, mid, right = types[i - 1], types[i], types[i + 1]
-        if mid == "ES" and left == right == "EN":
-            types[i] = "EN"
-        elif mid == "CS" and left == right and left in ("EN", "AN"):
-            types[i] = left
-
-    # W5: % signs (ET) next to a European number become part of it.
-    i = 0
-    while i < n:
-        if types[i] == "ET":
-            j = i
-            while j < n and types[j] == "ET":
-                j += 1
-            if (i > 0 and types[i - 1] == "EN") or (j < n and types[j] == "EN"):
-                types[i:j] = ["EN"] * (j - i)
-            i = j
-        else:
-            i += 1
-
-    # W6, W7, N1, N2, I2: with no left-to-right letters anywhere, every remaining
-    # neutral resolves to right-to-left, and numbers (EN/AN) get level 2 (LTR).
-    return [t in ("EN", "AN") for t in types]
+# Bidi rules live in the runtime package (the recognizer needs them too).
+__all__ = ["MissingGlyphError", "ltr_mask", "render_line", "split_runs"]
 
 
 @dataclass(frozen=True)
