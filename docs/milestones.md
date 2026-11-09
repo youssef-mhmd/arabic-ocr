@@ -49,10 +49,10 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Goal:** a model that reads one line image → Arabic text.
 
-- [ ] Recognizer model: CNN backbone + BiLSTM/Transformer encoder + CTC head (target ≤ 20 MB)
-- [ ] Training script: config file, mixed precision, checkpointing, resume, fixed seeds, logs (TensorBoard or CSV)
+- [x] Recognizer model: CNN backbone + BiLSTM/Transformer encoder + CTC head (target ≤ 20 MB)
+- [x] Training script: config file, mixed precision, checkpointing, resume, fixed seeds, logs (TensorBoard or CSV)
 - [ ] Notebook/script that runs training on Kaggle/Colab
-- [ ] CTC greedy decoder (beam search later)
+- [x] CTC greedy decoder (beam search later)
 - [ ] Evaluation script: CER/WER, with and without diacritics, per font family
 - [ ] Label a real test set: 50+ real printed line images and 50+ screenshot lines *(parallel ok)*
 - [ ] ONNX export + check that ONNX output matches PyTorch output

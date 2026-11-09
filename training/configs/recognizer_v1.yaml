@@ -1,0 +1,42 @@
+# First line-recognizer training run (M2).
+#
+#   uv run --group train python -m training.train_recognizer training/configs/recognizer_v1.yaml
+#
+# Outputs go to runs/<name>/ (git-ignored): log.csv, val.csv, last.pt, best.pt.
+# Interrupt any time (Ctrl+C); run the same command again to resume.
+
+name: recognizer_v1
+seed: 1234
+dataset: data/datasets/v1
+
+model:
+  rnn_hidden: 256
+  rnn_layers: 2
+  dropout: 0.2
+
+# How long to train: passes over the 1M training images. Measured on the RTX 5060
+# laptop: ~550 images/s, so one pass is ~30 minutes and 8 passes ~4-4.5 hours.
+# A 300k-image test run already reached 5% CER, so 8 should be plenty.
+epochs: 8
+
+# Batches are built by width: at most `max_batch` lines and at most `width_budget`
+# padded pixels of width in total (e.g. 128 lines x 512 px). Lower width_budget if
+# the GPU runs out of memory.
+max_batch: 128
+width_budget: 65536
+
+optimizer:
+  lr: 0.001            # peak learning rate (AdamW)
+  weight_decay: 0.01
+  warmup_samples: 200000   # learning rate ramps up over the first 200k images
+  min_lr_fraction: 0.02    # then decays (cosine) to 2% of the peak by the end
+  grad_clip: 5.0
+
+# Mixed precision: compute in bfloat16 where safe (much faster on RTX GPUs); the CTC
+# loss itself is always computed in float32.
+amp: bf16
+
+num_workers: 8
+
+log_every_steps: 100
+val_every_samples: 250000   # also saves a checkpoint
