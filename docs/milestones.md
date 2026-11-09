@@ -34,7 +34,7 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 - [x] Font collection (50+ OFL/Apache Arabic fonts) with a `fonts.json` manifest recording each font's license
 - [x] Renderer using uharfbuzz + freetype-py (correct joining, ligatures, mark positioning)
 - [x] Augmentation pipeline: blur, noise, JPEG, skew/rotation, perspective, paper textures, shadows, low DPI, ink bleed, screenshot/UI backgrounds
-- [ ] Dataset writer (sharded files, e.g. LMDB or WebDataset tar) + train/val/test split
+- [x] Dataset writer (sharded files, e.g. LMDB or WebDataset tar) + train/val/test split
 - [ ] `data/LICENSES.md`: license for every corpus and font
 - [x] Visual inspection notebook/script: render a grid of samples for spot-checking
 - [ ] `docs/learning/02-data.md`

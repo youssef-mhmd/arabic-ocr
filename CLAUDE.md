@@ -24,6 +24,7 @@ uv sync                      # install deps (runtime + dev + data generation)
 uv sync --group train        # + training deps (torch)
 uv run python -m training.download_fonts      # fetch training fonts into data/fonts/
 uv run python -m training.inspect_samples     # render samples -> data/inspect/index.html
+uv run python -m training.make_dataset training/configs/data_sample.yaml   # build a dataset -> data/datasets/<name>/
 uv run pytest                # tests
 uv run ruff check . && uv run ruff format .
 uv run arabic-ocr <file>     # run the OCR CLI

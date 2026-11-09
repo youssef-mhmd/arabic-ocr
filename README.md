@@ -13,6 +13,7 @@ uv sync                      # install runtime + dev + data-generation dependenc
 uv sync --group train        # + training dependencies (PyTorch; not available on Intel Macs)
 uv run python -m training.download_fonts    # download the training fonts (~27 MB)
 uv run python -m training.inspect_samples   # render sample lines to data/inspect/index.html
+uv run python -m training.make_dataset training/configs/data_sample.yaml   # build a dataset -> data/datasets/<name>/
 uv run pytest                # run tests
 uv run ruff check . && uv run ruff format .
 uv run arabic-ocr --version

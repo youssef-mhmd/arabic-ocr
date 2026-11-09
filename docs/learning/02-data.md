@@ -2,7 +2,7 @@
 
 A recognizer learns from pairs of **(image, label)**: a picture of a text line and the exact text it shows. This note explains how we define the possible characters, how we make labels consistent, and (as M1 continues) how we generate millions of images.
 
-*Status: sections 1–6 are written. Dataset files will be added when that part of M1 lands.*
+*Status: sections 1–7 are written.*
 
 ---
 
@@ -148,4 +148,25 @@ uv run python -m training.inspect_samples -n 200 --augment
 
 ---
 
-*Next section (coming in M1): dataset files.*
+## 7. Dataset files and splits
+
+Training reads millions of images, often on a rented GPU machine that must first copy them over. So *how* they're stored matters.
+
+**Shards.** We pack samples into `.tar` files ("shards") of about 5,000 samples each. Every sample is three files with the same name: the image (`.png`), the label (`.txt`), and extra info like the font (`.json`). This is the **WebDataset** layout. Copying 200 big files is far faster than copying a million small ones, training can read a shard from start to end without jumping around the disk, and any archive tool can open a shard to look inside.
+
+Images are stored at a fixed **height of 64 pixels** (width follows the line length) as lossless PNG, about 8.5 KB each. 1M images is about 8–9 GB.
+
+**Splits, done at the right level.** Note 01 explained train/validation/test. The trap is *leaks*: if the sentence "اَلْعِلْمُ نُورٌ" is in training and a different crop of it is in the test set, the test score measures memory, not reading. So we split the **source sentences** first, then cut lines from each split's own sentences. Each sentence's split is decided by a **hash** of its text (with diacritics removed, so the diacritized and plain versions go together). A hash is a fixed "fingerprint" of the text: the same sentence always gets the same split, on any computer, without storing a list.
+
+**Reproducible and resumable.** Every shard gets its own random seed, computed from the dataset's seed plus the split name and shard number. So:
+- shards can be made **in parallel**, one per CPU core;
+- if generation crashes or you press Ctrl+C, just run the command again: **finished shards are kept**, and missing ones are made again identically;
+- a shard is written under a temporary name and renamed only when complete, so a half-written shard can never be mistaken for a finished one.
+
+**The manifest.** `manifest.json` records the full config, the number of sentences and samples per split, the fonts commit, and a **charset fingerprint**: a hash of the symbol list. A model trained on this data only works with the exact same charset, so training will check this fingerprint.
+
+```
+uv run python -m training.make_dataset training/configs/data_sample.yaml
+```
+
+Speed on a normal PC: about 200 images/second per CPU core, so 1M images take roughly 10 minutes on 8+ cores.

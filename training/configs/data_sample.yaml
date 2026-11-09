@@ -1,0 +1,38 @@
+# A small dataset built from the project's own sample sentences.
+# Used to test the whole data pipeline end to end before the real corpora exist.
+#
+#   uv run python -m training.make_dataset training/configs/data_sample.yaml
+
+name: sample
+seed: 1234
+
+# UTF-8 text files; each line is cleaned and split into source sentences.
+text_files:
+  - training/samples/sample_text.txt
+
+# Share of *source sentences* (not lines) held out for validation and test.
+# The sample text has only ~20 sentences, so these are much larger than usual.
+split:
+  val_frac: 0.15
+  test_frac: 0.15
+
+# How many line images to make for each split.
+samples:
+  train: 2000
+  val: 300
+  test: 300
+
+shard_size: 500
+
+# Text is rendered at a random font size, augmented, then resized so every image has
+# this height (width follows the aspect ratio). 64 px keeps diacritics clearly
+# visible; the model can shrink images further if it wants.
+image_height: 64
+font_size_px: [24, 64]
+
+# Overrides for training/text.py SamplerConfig (any field not listed keeps its default).
+sampler: {}
+
+# Overrides for training/augment.py AugmentConfig. Set `enabled: false` for clean images.
+augment:
+  enabled: true
