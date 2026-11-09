@@ -33,14 +33,23 @@ dev = [
 gui = [
     "pyside6>=6.12.0",
 ]
+# Synthetic data generation (text shaping, font rendering, config files). Small and
+# available on every platform, so it is installed by default and tested in CI.
+data = [
+    "freetype-py>=2.5.1",
+    "pyyaml>=6.0.3",
+    "uharfbuzz>=0.57.0",
+]
 # Training only (GPU machines: Kaggle/Colab/Linux/Windows). torch has no macOS Intel
 # wheels for Python 3.13, so `uv sync --group train` does not work on Intel Macs.
 train = [
-    "freetype-py>=2.5.1",
-    "pyyaml>=6.0.3",
+    { include-group = "data" },
     "torch>=2.15.0",
-    "uharfbuzz>=0.57.0",
 ]
+
+[tool.uv]
+# `uv sync` installs these groups unless told otherwise.
+default-groups = ["dev", "data"]
 
 [tool.ruff]
 line-length = 100

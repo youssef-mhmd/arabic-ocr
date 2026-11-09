@@ -1,0 +1,1335 @@
+{
+  "source_repo": "google/fonts",
+  "source_commit": "5bb28733cec313b63fbd415b574b5ae35c8aa8b8",
+  "families": [
+    {
+      "family": "Amiri",
+      "dir": "amiri",
+      "style": "naskh",
+      "role": "core",
+      "weight": 2.0,
+      "license": "OFL",
+      "designer": "Khaled Hosny, Sebastian Kosch",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/amiri",
+      "license_file": "data/fonts/amiri/OFL.txt",
+      "files": [
+        {
+          "filename": "Amiri-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "ab391c4147d054c48976e98322ad0eefe1427aa0e0502a12a4c75d80a70cfcd7",
+          "missing": ""
+        },
+        {
+          "filename": "Amiri-Italic.ttf",
+          "style": "italic",
+          "weight": 400,
+          "sha256": "770e4da44d0459c0ddd6484483d475b95f2d088dd27ce472427624081eb68c70",
+          "missing": ""
+        },
+        {
+          "filename": "Amiri-Bold.ttf",
+          "style": "normal",
+          "weight": 700,
+          "sha256": "cfccb794268e7d573d857e6d6a67f89cf8a053e8ffd85dfa0c8ec1bb36fc4827",
+          "missing": ""
+        },
+        {
+          "filename": "Amiri-BoldItalic.ttf",
+          "style": "italic",
+          "weight": 700,
+          "sha256": "241300e2dcb2c541ac3617872960d99683d261e4f526dc4691d0727e7bef130b",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Amiri Quran",
+      "dir": "amiriquran",
+      "style": "naskh",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "Khaled Hosny, Sebastian Kosch",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/amiriquran",
+      "license_file": "data/fonts/amiriquran/OFL.txt",
+      "files": [
+        {
+          "filename": "AmiriQuran-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "e2a47644762d16bdfb6d33e0d8db8c6ff30beae84150ef5a705316bbd829455c",
+          "missing": "پچژکگٹڈڑھہۂۀەےۓ٪٫٬۔"
+        }
+      ]
+    },
+    {
+      "family": "Noto Naskh Arabic",
+      "dir": "notonaskharabic",
+      "style": "naskh",
+      "role": "core",
+      "weight": 2.0,
+      "license": "OFL",
+      "designer": "Google",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/notonaskharabic",
+      "license_file": "data/fonts/notonaskharabic/OFL.txt",
+      "files": [
+        {
+          "filename": "NotoNaskhArabic[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "67b5a525a661b607971fbd3f96a81b89d3a768e74534fca84f18ac97e6fab72f",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Scheherazade New",
+      "dir": "scheherazadenew",
+      "style": "naskh",
+      "role": "core",
+      "weight": 1.5,
+      "license": "OFL",
+      "designer": "SIL International",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/scheherazadenew",
+      "license_file": "data/fonts/scheherazadenew/OFL.txt",
+      "files": [
+        {
+          "filename": "ScheherazadeNew-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "794bac8dc9e83d1d620bc471ea694f5f31d0965ce8006490a79dfc51a2d283b3",
+          "missing": ""
+        },
+        {
+          "filename": "ScheherazadeNew-Medium.ttf",
+          "style": "normal",
+          "weight": 500,
+          "sha256": "060b801307ec55d996d635578fffba0d95169f63e1d0f6061402185eaf4fa6af",
+          "missing": ""
+        },
+        {
+          "filename": "ScheherazadeNew-SemiBold.ttf",
+          "style": "normal",
+          "weight": 600,
+          "sha256": "155056d27ea5a34ab739170abeff8d45b44a494e39be329f0a4d1e6cbd173390",
+          "missing": ""
+        },
+        {
+          "filename": "ScheherazadeNew-Bold.ttf",
+          "style": "normal",
+          "weight": 700,
+          "sha256": "91363517a63dbc7448b5814226d33d845b26b32a461cd159ea0b3f23c7effd2d",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Lateef",
+      "dir": "lateef",
+      "style": "naskh",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "SIL International",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/lateef",
+      "license_file": "data/fonts/lateef/OFL.txt",
+      "files": [
+        {
+          "filename": "Lateef-ExtraLight.ttf",
+          "style": "normal",
+          "weight": 200,
+          "sha256": "d22920471ea9305e50b18674a285975cd9856059dd1dccb088becb101090c328",
+          "missing": ""
+        },
+        {
+          "filename": "Lateef-Light.ttf",
+          "style": "normal",
+          "weight": 300,
+          "sha256": "f5c18f8c66cc30a61cc009f86b31aeecc4d81804fe4ef847cef4d2288a1e6723",
+          "missing": ""
+        },
+        {
+          "filename": "Lateef-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "fcbd9e0227a4d7238880defa5fd74c012d69351150709e559a8577446145c2fc",
+          "missing": ""
+        },
+        {
+          "filename": "Lateef-Medium.ttf",
+          "style": "normal",
+          "weight": 500,
+          "sha256": "b08e71723c6bdcc7855a1384ced2cc459f0fbbc65dfa0dfa0a94b9983d484ef1",
+          "missing": ""
+        },
+        {
+          "filename": "Lateef-SemiBold.ttf",
+          "style": "normal",
+          "weight": 600,
+          "sha256": "ac0ba34269c19062340d942c5ad4ecc41ab8b9d21df92973372a7e1d7a421ff2",
+          "missing": ""
+        },
+        {
+          "filename": "Lateef-Bold.ttf",
+          "style": "normal",
+          "weight": 700,
+          "sha256": "eee405eeb4e81491b0b659fb40dc016765292022d74406c616f72501e160afe2",
+          "missing": ""
+        },
+        {
+          "filename": "Lateef-ExtraBold.ttf",
+          "style": "normal",
+          "weight": 800,
+          "sha256": "ee6406b63af32993054b1f7e2d6ff0fd7c91c409b0d4818bb1d686f709f0cdff",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Harmattan",
+      "dir": "harmattan",
+      "style": "naskh",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "SIL International",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/harmattan",
+      "license_file": "data/fonts/harmattan/OFL.txt",
+      "files": [
+        {
+          "filename": "Harmattan-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "5fbaafc51ad21663729b168afaff5f28d3e3087f1fc736ada32d7cd99674c0e0",
+          "missing": ""
+        },
+        {
+          "filename": "Harmattan-Medium.ttf",
+          "style": "normal",
+          "weight": 500,
+          "sha256": "e83a209c87145152dcc4df18ffdd50aad8407fb563135392e168c896e932d2d5",
+          "missing": ""
+        },
+        {
+          "filename": "Harmattan-SemiBold.ttf",
+          "style": "normal",
+          "weight": 600,
+          "sha256": "83479450450a50da78412f2f48b274883095a23a01d6bf36db54e769cb09b11d",
+          "missing": ""
+        },
+        {
+          "filename": "Harmattan-Bold.ttf",
+          "style": "normal",
+          "weight": 700,
+          "sha256": "eb9de49ecb72d34e14c768bea6f9a7831f6bd2c15b062fcc2bb17b0ac967bc67",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Markazi Text",
+      "dir": "markazitext",
+      "style": "naskh",
+      "role": "core",
+      "weight": 1.5,
+      "license": "OFL",
+      "designer": "Borna Izadpanah, Florian Runge, Fiona Ross",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/markazitext",
+      "license_file": "data/fonts/markazitext/OFL.txt",
+      "files": [
+        {
+          "filename": "MarkaziText[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "424b7331681160ff2a4b209bfc356ea9564d429a7daea43ee4dc28de8ff4f9fe",
+          "missing": "ۀە٪"
+        }
+      ]
+    },
+    {
+      "family": "Mirza",
+      "dir": "mirza",
+      "style": "naskh",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "KB Studio",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/mirza",
+      "license_file": "data/fonts/mirza/OFL.txt",
+      "files": [
+        {
+          "filename": "Mirza-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "5b1ac6cb285ca3492e313a53d5252b9784bf7607f2835a2d44cb3cbad0168539",
+          "missing": "ۀ"
+        },
+        {
+          "filename": "Mirza-Medium.ttf",
+          "style": "normal",
+          "weight": 500,
+          "sha256": "423532407cc832ef84cc8f08a3359f26b50e721c8aa0e00221e4215cc83440b3",
+          "missing": "ۀ"
+        },
+        {
+          "filename": "Mirza-SemiBold.ttf",
+          "style": "normal",
+          "weight": 600,
+          "sha256": "4225215d0df4ad389c4ac29d48fddc531703776591ade64c23f6f995669d4078",
+          "missing": "ۀ"
+        },
+        {
+          "filename": "Mirza-Bold.ttf",
+          "style": "normal",
+          "weight": 700,
+          "sha256": "306b412a39d9f93ca840c13ca62300eb5c7712e2afa94bd7ef2272b51131be6d",
+          "missing": "ۀ"
+        }
+      ]
+    },
+    {
+      "family": "Alkalami",
+      "dir": "alkalami",
+      "style": "sahel",
+      "role": "core",
+      "weight": 0.5,
+      "license": "OFL",
+      "designer": "SIL International",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/alkalami",
+      "license_file": "data/fonts/alkalami/OFL.txt",
+      "files": [
+        {
+          "filename": "Alkalami-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "4410dfc591b918dd4360b0252b079855a8a00250de363c8c0163b29ddfc56434",
+          "missing": "ٱچٹڈڑھہۂۀە۰۱۲۳۴۵۶۷۸۹۔"
+        }
+      ]
+    },
+    {
+      "family": "Noto Sans Arabic",
+      "dir": "notosansarabic",
+      "style": "sans",
+      "role": "core",
+      "weight": 2.0,
+      "license": "OFL",
+      "designer": "Google",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/notosansarabic",
+      "license_file": "data/fonts/notosansarabic/OFL.txt",
+      "files": [
+        {
+          "filename": "NotoSansArabic[wdth,wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "63111b5b2e074dd48cc67692e0a2726d86ee94c1c37fe8598257b7b4e87e869e",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "IBM Plex Sans Arabic",
+      "dir": "ibmplexsansarabic",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.5,
+      "license": "OFL",
+      "designer": "Mike Abbink, Bold Monday, Khajag Apelian, Wael Morcos",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/ibmplexsansarabic",
+      "license_file": "data/fonts/ibmplexsansarabic/OFL.txt",
+      "files": [
+        {
+          "filename": "IBMPlexSansArabic-Thin.ttf",
+          "style": "normal",
+          "weight": 100,
+          "sha256": "f8e1f556f815e3d29c531f79ff2bed276bec18d403fc6470b54900922cd91a79",
+          "missing": ""
+        },
+        {
+          "filename": "IBMPlexSansArabic-ExtraLight.ttf",
+          "style": "normal",
+          "weight": 200,
+          "sha256": "4d4137f37a1acd61f1b7eba47c08d0996789596b1e535f9220914ad5daf0a198",
+          "missing": ""
+        },
+        {
+          "filename": "IBMPlexSansArabic-Light.ttf",
+          "style": "normal",
+          "weight": 300,
+          "sha256": "0af9d1effbb36ff74d13c64f752c771ecb9162a451cf151c5425f4d00d4daa7c",
+          "missing": ""
+        },
+        {
+          "filename": "IBMPlexSansArabic-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "6f611412270a132bbac838da9259d4c68569b4175f3b3b8fa3fa36a30b56dab9",
+          "missing": ""
+        },
+        {
+          "filename": "IBMPlexSansArabic-Medium.ttf",
+          "style": "normal",
+          "weight": 500,
+          "sha256": "b8363ab9f733dfa4f8e96b8b2102c24b5cf4110fb96d1d3d9a9412f6fb49cf74",
+          "missing": ""
+        },
+        {
+          "filename": "IBMPlexSansArabic-SemiBold.ttf",
+          "style": "normal",
+          "weight": 600,
+          "sha256": "597bd5502e5997be4414e4c9c88834b30ff3784250c84f20bce2b20e53ebd467",
+          "missing": ""
+        },
+        {
+          "filename": "IBMPlexSansArabic-Bold.ttf",
+          "style": "normal",
+          "weight": 700,
+          "sha256": "691e0c891a38637ae6bbdb69700f8042cb0724a137bee615068ffdb92244f61f",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Vazirmatn",
+      "dir": "vazirmatn",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.5,
+      "license": "OFL",
+      "designer": "Saber Rastikerdar",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/vazirmatn",
+      "license_file": "data/fonts/vazirmatn/OFL.txt",
+      "files": [
+        {
+          "filename": "Vazirmatn[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "696249a2c74b39ffdef55de4df2809c5b639d3ff80d618d8160a095d2fd49dca",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Cairo",
+      "dir": "cairo",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.5,
+      "license": "OFL",
+      "designer": "Mohamed Gaber, Accademia di Belle Arti di Urbino",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/cairo",
+      "license_file": "data/fonts/cairo/OFL.txt",
+      "files": [
+        {
+          "filename": "Cairo[slnt,wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "667c987182391c91f4e57a2f455b1794fb5e3ee6ca4ef3383e86bb690fa9c964",
+          "missing": "ۀە"
+        }
+      ]
+    },
+    {
+      "family": "Cairo Play",
+      "dir": "cairoplay",
+      "style": "sans",
+      "role": "core",
+      "weight": 0.5,
+      "license": "OFL",
+      "designer": "Mohamed Gaber, Accademia di Belle Arti di Urbino",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/cairoplay",
+      "license_file": "data/fonts/cairoplay/OFL.txt",
+      "files": [
+        {
+          "filename": "CairoPlay[slnt,wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "2c275b43ace54233a0960c3aa1d05b4e9e0e396a501cd3f8d446b16cc3362745",
+          "missing": "ۀە"
+        }
+      ]
+    },
+    {
+      "family": "Tajawal",
+      "dir": "tajawal",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.5,
+      "license": "OFL",
+      "designer": "Boutros Fonts, Mourad Boutros, Soulaf Khalifeh",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/tajawal",
+      "license_file": "data/fonts/tajawal/OFL.txt",
+      "files": [
+        {
+          "filename": "Tajawal-ExtraLight.ttf",
+          "style": "normal",
+          "weight": 200,
+          "sha256": "a12ffbfaaec30ab8142edc60fa4727b104a90eb54c6a200a76988a1ec2ec11dc",
+          "missing": "ٱچژکگیٹڈڑںھہۂۀەےۓ۰۱۲۳۴۵۶۷۸۹٫٬۔"
+        },
+        {
+          "filename": "Tajawal-Light.ttf",
+          "style": "normal",
+          "weight": 300,
+          "sha256": "ab26ed3e0c5af2c71b469b5780decff8088d290ab91aa29b07321580136e813a",
+          "missing": "ٱچژکگیٹڈڑںھہۂۀەےۓ۰۱۲۳۴۵۶۷۸۹٫٬۔"
+        },
+        {
+          "filename": "Tajawal-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "6882892da3e03527d5db2bbab3b48bde6ef2e878a43f522d1a4eebda90010a19",
+          "missing": "ٱچژکگیٹڈڑںھہۂۀەےۓ۰۱۲۳۴۵۶۷۸۹٫٬۔"
+        },
+        {
+          "filename": "Tajawal-Medium.ttf",
+          "style": "normal",
+          "weight": 500,
+          "sha256": "1ff8bd943a261c9dd7906bdb1993cab87b6d925a7fb5f848cdb51ed301531090",
+          "missing": "ٱچژکگیٹڈڑںھہۂۀەےۓ۰۱۲۳۴۵۶۷۸۹٫٬۔"
+        },
+        {
+          "filename": "Tajawal-Bold.ttf",
+          "style": "normal",
+          "weight": 700,
+          "sha256": "0342ab6b74b6bd1b4b5bf7beda45a9734a2b3147a31e8a3a45b6a3417a52d9d7",
+          "missing": "ٱچژکگیٹڈڑںھہۂۀەےۓ۰۱۲۳۴۵۶۷۸۹٫٬۔"
+        },
+        {
+          "filename": "Tajawal-ExtraBold.ttf",
+          "style": "normal",
+          "weight": 800,
+          "sha256": "3d1298b747c22579f9e1bdeb0d4165064cb17f7e66145e2f43f9deb12ad7a2cf",
+          "missing": "ٱچژکگیٹڈڑںھہۂۀەےۓ۰۱۲۳۴۵۶۷۸۹٫٬۔"
+        },
+        {
+          "filename": "Tajawal-Black.ttf",
+          "style": "normal",
+          "weight": 900,
+          "sha256": "da582a579d3200869535dc994d2349608a8582042f8776b3679b157015db287c",
+          "missing": "ٱچژکگیٹڈڑںھہۂۀەےۓ۰۱۲۳۴۵۶۷۸۹٫٬۔"
+        }
+      ]
+    },
+    {
+      "family": "Almarai",
+      "dir": "almarai",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.5,
+      "license": "OFL",
+      "designer": "Boutros Fonts, Mourad Boutros",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/almarai",
+      "license_file": "data/fonts/almarai/OFL.txt",
+      "files": [
+        {
+          "filename": "Almarai-Light.ttf",
+          "style": "normal",
+          "weight": 300,
+          "sha256": "a57bca270340202a28899f7488ee76ed9b93115b89d7a81db92d68e29993da5a",
+          "missing": "ە"
+        },
+        {
+          "filename": "Almarai-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "5b5cad33c8e5922083728d271cdcda91f96ba291f1307eccc4f4ef732dc19622",
+          "missing": "ە"
+        },
+        {
+          "filename": "Almarai-Bold.ttf",
+          "style": "normal",
+          "weight": 700,
+          "sha256": "06401391b5b39fbcf2bc0c6a6e03faf992435e7b011183a1861737e913af8613",
+          "missing": "ە"
+        },
+        {
+          "filename": "Almarai-ExtraBold.ttf",
+          "style": "normal",
+          "weight": 800,
+          "sha256": "9f8f72f1cb06db787a5b32e314a109267e53c505c9f9ab0dad5aa8ff8b219a07",
+          "missing": "ە"
+        }
+      ]
+    },
+    {
+      "family": "Mada",
+      "dir": "mada",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "Khaled Hosny, Paul D. Hunt",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/mada",
+      "license_file": "data/fonts/mada/OFL.txt",
+      "files": [
+        {
+          "filename": "Mada[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "bf4d193ee78cea2fd8bdc9e64e5cb7e8a19ff76ab74f97a9a4a0e80f8f4cefde",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Changa",
+      "dir": "changa",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "Eduardo Tunni",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/changa",
+      "license_file": "data/fonts/changa/OFL.txt",
+      "files": [
+        {
+          "filename": "Changa[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "7c4f7a14d4b70ac8816ea8df3a0b127aee4c5f5af7239aca2afecc84ddc7f4d3",
+          "missing": "ۀە"
+        }
+      ]
+    },
+    {
+      "family": "El Messiri",
+      "dir": "elmessiri",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "Mohamed Gaber, Jovanny Lemonad",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/elmessiri",
+      "license_file": "data/fonts/elmessiri/OFL.txt",
+      "files": [
+        {
+          "filename": "ElMessiri[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "5d58d5259d2accccba39cffe12e1226e88b6afc5150e3605eb2a9c2fe06ccab0",
+          "missing": "ۀە"
+        }
+      ]
+    },
+    {
+      "family": "Readex Pro",
+      "dir": "readexpro",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "Thomas Jockin, Nadine Chahine, Bonnie Shaver-Troup, Santiago Orozco, Héctor Gómez",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/readexpro",
+      "license_file": "data/fonts/readexpro/OFL.txt",
+      "files": [
+        {
+          "filename": "ReadexPro[HEXP,wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "268bba7e1e8f3b14d798b3fb0e40ebaa3fc39308c9ac0020e2faf6df181cc30e",
+          "missing": "پچژکگیٹڈڑھہۂۀەےۓ۰۱۲۳۴۵۶۷۸۹۔"
+        }
+      ]
+    },
+    {
+      "family": "Rubik",
+      "dir": "rubik",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "Hubert and Fischer, Meir Sadan, Cyreal, Daniel Grumer, Omaima Dajani",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/rubik",
+      "license_file": "data/fonts/rubik/OFL.txt",
+      "files": [
+        {
+          "filename": "Rubik[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "1b3a7437ba2af80e465e773ed60c5036d1ba6ace492d89046dbcf18fb31e4e88",
+          "missing": "ٹڈڑھہۂۀەےۓ۔"
+        },
+        {
+          "filename": "Rubik-Italic[wght].ttf",
+          "style": "italic",
+          "weight": 400,
+          "sha256": "08c6c4018a5ada8b517407b46897e46cf6ebb106853fbd3e89addb51d3b59c62",
+          "missing": "ٹڈڑھہۂۀەےۓ۔"
+        }
+      ]
+    },
+    {
+      "family": "Baloo Bhaijaan 2",
+      "dir": "baloobhaijaan2",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "Ek Type",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/baloobhaijaan2",
+      "license_file": "data/fonts/baloobhaijaan2/OFL.txt",
+      "files": [
+        {
+          "filename": "BalooBhaijaan2[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "3e9f07fbc796c0ddcb3e6e0aa26f9c86741d9f5b7f5cb72f4ed3c06e55a19336",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Alexandria",
+      "dir": "alexandria",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "Mohamed Gaber, Julieta Ulanovsky",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/alexandria",
+      "license_file": "data/fonts/alexandria/OFL.txt",
+      "files": [
+        {
+          "filename": "Alexandria[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "db8ae03b62d55a65aa4e04307878df8c00d6e5388e4800635cbe0e22b6411b64",
+          "missing": "ۀە"
+        }
+      ]
+    },
+    {
+      "family": "Zain",
+      "dir": "zain",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "Boutros Fonts",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/zain",
+      "license_file": "data/fonts/zain/OFL.txt",
+      "files": [
+        {
+          "filename": "Zain-ExtraLight.ttf",
+          "style": "normal",
+          "weight": 200,
+          "sha256": "0fed2aeaa4a13676ee9a8b518804d4ce904a0b812a85bcbf35ea657cd2d308ac",
+          "missing": "٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹0123456789۔"
+        },
+        {
+          "filename": "Zain-Light.ttf",
+          "style": "normal",
+          "weight": 300,
+          "sha256": "21ac8d8c63f1d037d7922a7e1343ad07d9fc60cc922f5c267d12cd75d93f1037",
+          "missing": "٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹0123456789۔"
+        },
+        {
+          "filename": "Zain-LightItalic.ttf",
+          "style": "italic",
+          "weight": 300,
+          "sha256": "0681b370f399f997f62e0ed782e41fe80ef224afeb995e27f43e440b691b878e",
+          "missing": "۔"
+        },
+        {
+          "filename": "Zain-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "2a2b8af3804039c7f500c43f581a4145012728bc3109ef15d48371700f5e1f63",
+          "missing": "٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹0123456789۔"
+        },
+        {
+          "filename": "Zain-Italic.ttf",
+          "style": "italic",
+          "weight": 400,
+          "sha256": "ed2fd21e100b067530478c2c71229cca9e7213f905c6f8736deadc999bd2a9bb",
+          "missing": "۔"
+        },
+        {
+          "filename": "Zain-Bold.ttf",
+          "style": "normal",
+          "weight": 700,
+          "sha256": "4dc98e7b1a9cac93bde1907271472ba9cf43ae5212e942cafe59a6d341f052e3",
+          "missing": "٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹0123456789۔"
+        },
+        {
+          "filename": "Zain-ExtraBold.ttf",
+          "style": "normal",
+          "weight": 800,
+          "sha256": "1f28878c4fd73456c1b2fc0fe334767f397c51cd227376b30dc9412732e74abf",
+          "missing": "٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹0123456789۔"
+        },
+        {
+          "filename": "Zain-Black.ttf",
+          "style": "normal",
+          "weight": 900,
+          "sha256": "fb9146db13654b0e75003e8db55508167782d70bb64d85c0b4a0e689f016939f",
+          "missing": "٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹0123456789۔"
+        }
+      ]
+    },
+    {
+      "family": "Beiruti",
+      "dir": "beiruti",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "Boutros Fonts, Arlette Boutros, Volker Schnebel",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/beiruti",
+      "license_file": "data/fonts/beiruti/OFL.txt",
+      "files": [
+        {
+          "filename": "Beiruti[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "c31f26b93e90ac916757de63c060370c5382457f85d50f64f930b96e5477f222",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Lemonada",
+      "dir": "lemonada",
+      "style": "sans",
+      "role": "core",
+      "weight": 0.5,
+      "license": "OFL",
+      "designer": "Mohamed Gaber, Eduardo Tunni",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/lemonada",
+      "license_file": "data/fonts/lemonada/OFL.txt",
+      "files": [
+        {
+          "filename": "Lemonada[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "84134e9e1da7d593839073157980a4d38296d2be10b61469a8f3169204959ad9",
+          "missing": "ۀە"
+        }
+      ]
+    },
+    {
+      "family": "Playpen Sans Arabic",
+      "dir": "playpensansarabic",
+      "style": "sans",
+      "role": "core",
+      "weight": 0.5,
+      "license": "OFL",
+      "designer": "TypeTogether, Azza Alameddine, Laura Meseguer, Veronika Burian, José Scaglione",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/playpensansarabic",
+      "license_file": "data/fonts/playpensansarabic/OFL.txt",
+      "files": [
+        {
+          "filename": "PlaypenSansArabic[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "31122f11b6aa8a36a283f95797663a575afffbe2d52b69e496f3a2440942a226",
+          "missing": "ۀ"
+        }
+      ]
+    },
+    {
+      "family": "Estedad",
+      "dir": "estedad",
+      "style": "sans",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "Amin Abedi, Fontamin",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/estedad",
+      "license_file": "data/fonts/estedad/OFL.txt",
+      "files": [
+        {
+          "filename": "Estedad[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "6e745beeeb0cae5eea7f38d3132597089548a622d87997b58944e5b1edfec5a1",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Noto Kufi Arabic",
+      "dir": "notokufiarabic",
+      "style": "kufi",
+      "role": "core",
+      "weight": 1.5,
+      "license": "OFL",
+      "designer": "Google",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/notokufiarabic",
+      "license_file": "data/fonts/notokufiarabic/OFL.txt",
+      "files": [
+        {
+          "filename": "NotoKufiArabic[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "494f6b61469d7a02a2d63f0fc4930bb007388d8cfe551de5eb98354e100889f3",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Reem Kufi",
+      "dir": "reemkufi",
+      "style": "kufi",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "Khaled Hosny, Santiago Orozco",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/reemkufi",
+      "license_file": "data/fonts/reemkufi/OFL.txt",
+      "files": [
+        {
+          "filename": "ReemKufi[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "33ead1986cd48c138c4d906c9e5a6341877268461f97623409a2014de1cd4aa4",
+          "missing": "٪٫٬"
+        }
+      ]
+    },
+    {
+      "family": "Kufam",
+      "dir": "kufam",
+      "style": "kufi",
+      "role": "core",
+      "weight": 1.0,
+      "license": "OFL",
+      "designer": "Original Type, Wael Morcos, Artur Schmal",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/kufam",
+      "license_file": "data/fonts/kufam/OFL.txt",
+      "files": [
+        {
+          "filename": "Kufam[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "f17a89b518c833de289598d0662bb9a07d09cc7d75b7079a15f1305f624bbcda",
+          "missing": ""
+        },
+        {
+          "filename": "Kufam-Italic[wght].ttf",
+          "style": "italic",
+          "weight": 400,
+          "sha256": "37c5cf29cb515099783461051cf2c927fc18605b3e7e0088f9bd2150aed756a9",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Aref Ruqaa",
+      "dir": "arefruqaa",
+      "style": "ruqaa",
+      "role": "core",
+      "weight": 0.7,
+      "license": "OFL",
+      "designer": "Abdullah Aref, Khaled Hosny, Hermann Zapf",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/arefruqaa",
+      "license_file": "data/fonts/arefruqaa/OFL.txt",
+      "files": [
+        {
+          "filename": "ArefRuqaa-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "ceb786d83ba92f35e96efcd8623c2858d288e0c543c8761ba35b1020989464f9",
+          "missing": "ۂ٫٬"
+        },
+        {
+          "filename": "ArefRuqaa-Bold.ttf",
+          "style": "normal",
+          "weight": 700,
+          "sha256": "247071015b7eefd63f94d6e47949c5d10294ed31bd432f809ba9a219d93f91bb",
+          "missing": "ۂ٫٬"
+        }
+      ]
+    },
+    {
+      "family": "Aref Ruqaa Ink",
+      "dir": "arefruqaaink",
+      "style": "ruqaa",
+      "role": "display",
+      "weight": 0.3,
+      "license": "OFL",
+      "designer": "Abdullah Aref, Khaled Hosny, Hermann Zapf",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/arefruqaaink",
+      "license_file": "data/fonts/arefruqaaink/OFL.txt",
+      "files": [
+        {
+          "filename": "ArefRuqaaInk-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "0415c2410b1e453f5d0ea0db114fb95d01f65ba2e9e2dc4ae67c5fb73c33e863",
+          "missing": "ۂ٫٬"
+        },
+        {
+          "filename": "ArefRuqaaInk-Bold.ttf",
+          "style": "normal",
+          "weight": 700,
+          "sha256": "601b5c607e7e20e7957673b92947d35eb87620cd406214037a140695221c31b4",
+          "missing": "ۂ٫٬"
+        }
+      ]
+    },
+    {
+      "family": "Noto Nastaliq Urdu",
+      "dir": "notonastaliqurdu",
+      "style": "nastaliq",
+      "role": "core",
+      "weight": 0.5,
+      "license": "OFL",
+      "designer": "Google",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/notonastaliqurdu",
+      "license_file": "data/fonts/notonastaliqurdu/OFL.txt",
+      "files": [
+        {
+          "filename": "NotoNastaliqUrdu[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "98a4787f34eb6fde57fb9a1121a8f216301196ab0da98ea110cad581be8abbcd",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Gulzar",
+      "dir": "gulzar",
+      "style": "nastaliq",
+      "role": "core",
+      "weight": 0.5,
+      "license": "OFL",
+      "designer": "Borna Izadpanah, Fiona Ross, Alice Savoie, Simon Cozens",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/gulzar",
+      "license_file": "data/fonts/gulzar/OFL.txt",
+      "files": [
+        {
+          "filename": "Gulzar-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "246337973ac64e8b70fe611405dcf32a395a8885c4497dc45dbc4975d3ac0831",
+          "missing": "ۀەـ٪٫٬"
+        }
+      ]
+    },
+    {
+      "family": "Lalezar",
+      "dir": "lalezar",
+      "style": "display",
+      "role": "display",
+      "weight": 0.3,
+      "license": "OFL",
+      "designer": "Borna Izadpanah",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/lalezar",
+      "license_file": "data/fonts/lalezar/OFL.txt",
+      "files": [
+        {
+          "filename": "Lalezar-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "7b80807bc831f141de0f7dcf6816412bf0c548968d548c5156ca388733390ea9",
+          "missing": "ە"
+        }
+      ]
+    },
+    {
+      "family": "Jomhuria",
+      "dir": "jomhuria",
+      "style": "display",
+      "role": "display",
+      "weight": 0.3,
+      "license": "OFL",
+      "designer": "KB Studio",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/jomhuria",
+      "license_file": "data/fonts/jomhuria/OFL.txt",
+      "files": [
+        {
+          "filename": "Jomhuria-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "17b4b0453acdaafb940a8be8acccc968713e223e5d03942347f6562ca3b1dec3",
+          "missing": ""
+        }
+      ]
+    },
+    {
+      "family": "Rakkas",
+      "dir": "rakkas",
+      "style": "display",
+      "role": "display",
+      "weight": 0.3,
+      "license": "OFL",
+      "designer": "Zeynep Akay",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/rakkas",
+      "license_file": "data/fonts/rakkas/OFL.txt",
+      "files": [
+        {
+          "filename": "Rakkas-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "54278882e4774c14d50c3b555f127d0fe586366d5b787316ebbcbd8108829e60",
+          "missing": "ۀە"
+        }
+      ]
+    },
+    {
+      "family": "Katibeh",
+      "dir": "katibeh",
+      "style": "display",
+      "role": "display",
+      "weight": 0.3,
+      "license": "OFL",
+      "designer": "KB Studio",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/katibeh",
+      "license_file": "data/fonts/katibeh/OFL.txt",
+      "files": [
+        {
+          "filename": "Katibeh-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "334eeadb58eb442734fe7dea87412cbbd8c3fd00294252723aadf19a850cf11f",
+          "missing": "ۀ"
+        }
+      ]
+    },
+    {
+      "family": "Marhey",
+      "dir": "marhey",
+      "style": "display",
+      "role": "display",
+      "weight": 0.3,
+      "license": "OFL",
+      "designer": "Nur Syamsi, Bustanul Arifin",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/marhey",
+      "license_file": "data/fonts/marhey/OFL.txt",
+      "files": [
+        {
+          "filename": "Marhey[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "19c30686157ec965797fae8c8feb7bb142b082217227562d1a809c067df447e9",
+          "missing": "ۀ"
+        }
+      ]
+    },
+    {
+      "family": "Badeen Display",
+      "dir": "badeendisplay",
+      "style": "display",
+      "role": "display",
+      "weight": 0.3,
+      "license": "OFL",
+      "designer": "Hani Alasadi",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/badeendisplay",
+      "license_file": "data/fonts/badeendisplay/OFL.txt",
+      "files": [
+        {
+          "filename": "BadeenDisplay-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "274805b3ee44f9b45a99bdcecf25cd44944c0a81f6cf8086b5cf30d00e860537",
+          "missing": "ۀە٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹0123456789"
+        }
+      ]
+    },
+    {
+      "family": "Reem Kufi Fun",
+      "dir": "reemkufifun",
+      "style": "display",
+      "role": "display",
+      "weight": 0.3,
+      "license": "OFL",
+      "designer": "Khaled Hosny, Santiago Orozco",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/reemkufifun",
+      "license_file": "data/fonts/reemkufifun/OFL.txt",
+      "files": [
+        {
+          "filename": "ReemKufiFun[wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "d1342cebd08afc04a51bf9a28e5ac6a8299c5716c47df9b7ea27f94653aaa40f",
+          "missing": "٪٫٬"
+        }
+      ]
+    },
+    {
+      "family": "Reem Kufi Ink",
+      "dir": "reemkufiink",
+      "style": "display",
+      "role": "display",
+      "weight": 0.3,
+      "license": "OFL",
+      "designer": "Khaled Hosny, Santiago Orozco",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/reemkufiink",
+      "license_file": "data/fonts/reemkufiink/OFL.txt",
+      "files": [
+        {
+          "filename": "ReemKufiInk-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "45fecf59cff786a23357b61d282e5ad383438be9507f3aa9ea00eb0534d0a87e",
+          "missing": "٪٫٬"
+        }
+      ]
+    },
+    {
+      "family": "Blaka",
+      "dir": "blaka",
+      "style": "display",
+      "role": "display",
+      "weight": 0.3,
+      "license": "OFL",
+      "designer": "Mohamed Gaber",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/blaka",
+      "license_file": "data/fonts/blaka/OFL.txt",
+      "files": [
+        {
+          "filename": "Blaka-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "5cd0ff67dcfbc371c6450afffe10f6e7027ffada0c31f436beb8865e57b781a3",
+          "missing": "ۀەـٰ٪٫٬"
+        }
+      ]
+    },
+    {
+      "family": "Blaka Ink",
+      "dir": "blakaink",
+      "style": "display",
+      "role": "display",
+      "weight": 0.2,
+      "license": "OFL",
+      "designer": "Mohamed Gaber",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/blakaink",
+      "license_file": "data/fonts/blakaink/OFL.txt",
+      "files": [
+        {
+          "filename": "BlakaInk-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "d745f0be7cf43f4e8998834ef730b3cab22a82db19d6a1737008b7b4a87112ea",
+          "missing": "ۀەـٰ٪٫٬"
+        }
+      ]
+    },
+    {
+      "family": "Blaka Hollow",
+      "dir": "blakahollow",
+      "style": "display",
+      "role": "display",
+      "weight": 0.1,
+      "license": "OFL",
+      "designer": "Mohamed Gaber",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/blakahollow",
+      "license_file": "data/fonts/blakahollow/OFL.txt",
+      "files": [
+        {
+          "filename": "BlakaHollow-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "59cb30824e6023d454b4b44038cf44cdc9a4ad67f9795171c646c98ceb2bd542",
+          "missing": "ۀەـٰ٪٫٬"
+        }
+      ]
+    },
+    {
+      "family": "Qahiri",
+      "dir": "qahiri",
+      "style": "display",
+      "role": "display",
+      "weight": 0.3,
+      "license": "OFL",
+      "designer": "Khaled Hosny",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/qahiri",
+      "license_file": "data/fonts/qahiri/OFL.txt",
+      "files": [
+        {
+          "filename": "Qahiri-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "9c4d8cfba7b663dad7eeeeb52a625749f3e1f5ec472a0a6333e1684a2f43dbdf",
+          "missing": "ۀ١۱1٫٬*+="
+        }
+      ]
+    },
+    {
+      "family": "Ruwudu",
+      "dir": "ruwudu",
+      "style": "display",
+      "role": "display",
+      "weight": 0.3,
+      "license": "OFL",
+      "designer": "SIL International",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/ruwudu",
+      "license_file": "data/fonts/ruwudu/OFL.txt",
+      "files": [
+        {
+          "filename": "Ruwudu-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "ed5b134e7f389eecfdabc6bbbf9605177fa8b5b9984c8b24edbec908623d2c3b",
+          "missing": "ٱچٹڈڑھہۂۀە۰۱۲۳۴۵۶۷۸۹۔"
+        },
+        {
+          "filename": "Ruwudu-Medium.ttf",
+          "style": "normal",
+          "weight": 500,
+          "sha256": "11688c54f825b293e6554c44a645ffa863a04331f3abee3dee18711a01719a8e",
+          "missing": "ٱچٹڈڑھہۂۀە۰۱۲۳۴۵۶۷۸۹۔"
+        },
+        {
+          "filename": "Ruwudu-SemiBold.ttf",
+          "style": "normal",
+          "weight": 600,
+          "sha256": "13f4e5c44f184bf9432cc4f4121e24853a3b81026a4223d113042710e361041d",
+          "missing": "ٱچٹڈڑھہۂۀە۰۱۲۳۴۵۶۷۸۹۔"
+        },
+        {
+          "filename": "Ruwudu-Bold.ttf",
+          "style": "normal",
+          "weight": 700,
+          "sha256": "7f7611d534aea674b960e0b586d1f594f3975b4db3fff5f55c1b92484a34cf78",
+          "missing": "ٱچٹڈڑھہۂۀە۰۱۲۳۴۵۶۷۸۹۔"
+        }
+      ]
+    },
+    {
+      "family": "Vibes",
+      "dir": "vibes",
+      "style": "display",
+      "role": "display",
+      "weight": 0.2,
+      "license": "OFL",
+      "designer": "AbdElmomen Kadhim (blueMix)",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/vibes",
+      "license_file": "data/fonts/vibes/OFL.txt",
+      "files": [
+        {
+          "filename": "Vibes-Regular.ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "297d9c8499e7383ac7675932741625ab12d9bb3abd1c31d2659b385d965a7ab7",
+          "missing": "ٹڈڑھہۂۀەےۓ۔"
+        }
+      ]
+    },
+    {
+      "family": "Handjet",
+      "dir": "handjet",
+      "style": "display",
+      "role": "display",
+      "weight": 0.2,
+      "license": "OFL",
+      "designer": "Rosetta, David Březina",
+      "source": "https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/handjet",
+      "license_file": "data/fonts/handjet/OFL.txt",
+      "files": [
+        {
+          "filename": "Handjet[ELGR,ELSH,wght].ttf",
+          "style": "normal",
+          "weight": 400,
+          "sha256": "9262749e8bb0b73ebcae0e20428689c3c59576eebeb6c4e1020300d2d41bdf4d",
+          "missing": "ە"
+        }
+      ]
+    }
+  ]
+}

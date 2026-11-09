@@ -1,0 +1,80 @@
+# Fonts used to render synthetic training data.
+#
+# All come from the official Google Fonts repository (https://github.com/google/fonts),
+# where every font has a METADATA.pb file listing its license and supported scripts.
+# `uv run python -m training.download_fonts` downloads them into data/fonts/ (git-ignored),
+# checks the license and Arabic support, and writes training/fonts.json.
+#
+# Fields:
+#   dir:    folder name in the Google Fonts repo (e.g. ofl/amiri)
+#   style:  naskh | sans | kufi | ruqaa | nastaliq | sahel (West African) | display
+#   role:   core = typical of books, documents, and screens; display = decorative
+#   weight: how often the generator picks this font, relative to others (default 1.0)
+
+source_repo: google/fonts
+# "main" means "use whatever is newest"; the exact commit used is recorded in fonts.json.
+source_ref: main
+allowed_licenses: [OFL, APACHE2]
+
+fonts:
+  # --- Naskh: the standard style of printed books and newspapers -------------
+  - {dir: amiri, style: naskh, role: core, weight: 2.0}
+  - {dir: amiriquran, style: naskh, role: core}
+  - {dir: notonaskharabic, style: naskh, role: core, weight: 2.0}
+  - {dir: scheherazadenew, style: naskh, role: core, weight: 1.5}
+  - {dir: lateef, style: naskh, role: core}
+  - {dir: harmattan, style: naskh, role: core}
+  - {dir: markazitext, style: naskh, role: core, weight: 1.5}
+  - {dir: mirza, style: naskh, role: core}
+  - {dir: alkalami, style: sahel, role: core, weight: 0.5}
+
+  # --- Sans / modern: UI text, screens, signage, modern print -----------------
+  - {dir: notosansarabic, style: sans, role: core, weight: 2.0}
+  - {dir: ibmplexsansarabic, style: sans, role: core, weight: 1.5}
+  - {dir: vazirmatn, style: sans, role: core, weight: 1.5}
+  - {dir: cairo, style: sans, role: core, weight: 1.5}
+  - {dir: cairoplay, style: sans, role: core, weight: 0.5}
+  - {dir: tajawal, style: sans, role: core, weight: 1.5}
+  - {dir: almarai, style: sans, role: core, weight: 1.5}
+  - {dir: mada, style: sans, role: core}
+  - {dir: changa, style: sans, role: core}
+  - {dir: elmessiri, style: sans, role: core}
+  - {dir: readexpro, style: sans, role: core}
+  - {dir: rubik, style: sans, role: core}
+  - {dir: baloobhaijaan2, style: sans, role: core}
+  - {dir: alexandria, style: sans, role: core}
+  - {dir: zain, style: sans, role: core}
+  - {dir: beiruti, style: sans, role: core}
+  - {dir: lemonada, style: sans, role: core, weight: 0.5}
+  - {dir: playpensansarabic, style: sans, role: core, weight: 0.5}
+  - {dir: estedad, style: sans, role: core}
+
+  # --- Kufi: geometric, common in headings and logos --------------------------
+  - {dir: notokufiarabic, style: kufi, role: core, weight: 1.5}
+  - {dir: reemkufi, style: kufi, role: core}
+  - {dir: kufam, style: kufi, role: core}
+
+  # --- Ruqaa: everyday handwriting style used in some print -------------------
+  - {dir: arefruqaa, style: ruqaa, role: core, weight: 0.7}
+  - {dir: arefruqaaink, style: ruqaa, role: display, weight: 0.3}
+
+  # --- Nastaliq: Urdu/Persian calligraphic style (not a v1 accuracy target) ---
+  - {dir: notonastaliqurdu, style: nastaliq, role: core, weight: 0.5}
+  - {dir: gulzar, style: nastaliq, role: core, weight: 0.5}
+
+  # --- Display: decorative headline fonts, sampled rarely ---------------------
+  - {dir: lalezar, style: display, role: display, weight: 0.3}
+  - {dir: jomhuria, style: display, role: display, weight: 0.3}
+  - {dir: rakkas, style: display, role: display, weight: 0.3}
+  - {dir: katibeh, style: display, role: display, weight: 0.3}
+  - {dir: marhey, style: display, role: display, weight: 0.3}
+  - {dir: badeendisplay, style: display, role: display, weight: 0.3}
+  - {dir: reemkufifun, style: display, role: display, weight: 0.3}
+  - {dir: reemkufiink, style: display, role: display, weight: 0.3}
+  - {dir: blaka, style: display, role: display, weight: 0.3}
+  - {dir: blakaink, style: display, role: display, weight: 0.2}
+  - {dir: blakahollow, style: display, role: display, weight: 0.1}
+  - {dir: qahiri, style: display, role: display, weight: 0.3}
+  - {dir: ruwudu, style: display, role: display, weight: 0.3}
+  - {dir: vibes, style: display, role: display, weight: 0.2}
+  - {dir: handjet, style: display, role: display, weight: 0.2}

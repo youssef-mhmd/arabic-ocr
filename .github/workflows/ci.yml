@@ -25,7 +25,9 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      # Installs runtime + dev deps only (no torch, no GUI), exactly as pinned in uv.lock.
+      # Installs runtime + dev + data deps (no torch, no GUI), exactly as pinned in uv.lock.
       - run: uv sync --locked
+      # Two fonts for the renderer tests (fonts are never committed to git).
+      - run: uv run python -m training.download_fonts --only notonaskharabic,vazirmatn
       - run: uv run pytest
       - run: uv run arabic-ocr --version

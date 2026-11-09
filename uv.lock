@@ -19,6 +19,7 @@ wheels = [
 name = "arabic-ocr"
 version = "0.1.0"
 source = { editable = "." }
+default-groups = ["data", "dev"]
 dependencies = [
     { name = "numpy" },
     { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
@@ -29,6 +30,11 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
+data = [
+    { name = "freetype-py" },
+    { name = "pyyaml" },
+    { name = "uharfbuzz" },
+]
 dev = [
     { name = "pytest" },
     { name = "ruff" },
@@ -54,6 +60,11 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
+data = [
+    { name = "freetype-py", specifier = ">=2.5.1" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "uharfbuzz", specifier = ">=0.57.0" },
+]
 dev = [
     { name = "pytest", specifier = ">=9.2.0" },
     { name = "ruff", specifier = ">=0.17.4" },

@@ -26,6 +26,19 @@ def test_clean_text_drops_orphan_diacritics():
     assert clean_text("كتب َالدرس") == ["كتب الدرس"]
 
 
+def test_clean_text_drops_loose_tatweel_but_keeps_attached():
+    assert clean_text("ـــ الفصل الأول ـــ") == ["الفصل الأول"]
+    assert clean_text("مـــحمد") == ["مـــحمد"]
+
+
+def test_lines_always_have_a_letter_or_digit():
+    sampler = LineSampler(SamplerConfig(short_prob=1.0), seed=0)
+    for _ in range(500):
+        line = sampler.sample("« . ، » ؟ سلام")
+        if line is not None:
+            assert any(c.isalnum() for c in line)
+
+
 def test_arabic_ratio():
     assert arabic_ratio("سلام") == 1.0
     assert arabic_ratio("١٢٣") == 0.0

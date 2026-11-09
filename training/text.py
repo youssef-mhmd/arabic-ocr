@@ -23,6 +23,11 @@ from arabic_ocr import charset
 _ARABIC_LETTERS = frozenset(
     charset.ARABIC_LETTERS + charset.ARABIC_EXTRA_LETTERS + charset.PERSIAN_URDU_LETTERS
 )
+_LETTERS_AND_DIGITS = _ARABIC_LETTERS | frozenset(
+    charset.WESTERN_DIGITS + charset.ARABIC_INDIC_DIGITS + charset.EASTERN_ARABIC_INDIC_DIGITS
+)
+# A run of tatweel with a space or line edge on both sides.
+_LOOSE_TATWEEL = re.compile(rf"(?<!\S){charset.TATWEEL}+(?!\S)")
 
 
 def _drop_orphan_marks(text: str) -> str:
@@ -76,6 +81,10 @@ def clean_text(raw: str, min_arabic_ratio: float = 0.5) -> list[str]:
     cleaned = []
     for seg in segments:
         seg = _drop_orphan_marks(seg)
+        # Free-standing tatweel (e.g. the decoration in "ـــ الفصل ـــ") is not
+        # attached to any letter; its length on the page has nothing to do with how
+        # many tatweel characters were typed, so it can't be labeled reliably.
+        seg = _LOOSE_TATWEEL.sub("", seg)
         seg = re.sub(" +", " ", seg).strip()
         if seg and arabic_ratio(seg) >= min_arabic_ratio:
             cleaned.append(seg)
@@ -161,6 +170,10 @@ class LineSampler:
         if len(line) > cfg.max_len:
             line = line[: cfg.max_len].rstrip()
         if not line or not (cfg.min_len <= len(line) <= cfg.max_len):
+            return None
+        # A line with no letters or digits (e.g. just "." or "«") is not worth
+        # training on.
+        if not any(c in _LETTERS_AND_DIGITS for c in line):
             return None
         return line
 

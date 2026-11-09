@@ -2,7 +2,7 @@
 
 A recognizer learns from pairs of **(image, label)**: a picture of a text line and the exact text it shows. This note explains how we define the possible characters, how we make labels consistent, and (as M1 continues) how we generate millions of images.
 
-*Status: sections 1–3 are written. Fonts, rendering, augmentation, and dataset files will be added as those parts of M1 land.*
+*Status: sections 1–5 are written. Augmentation and dataset files will be added as those parts of M1 land.*
 
 ---
 
@@ -73,4 +73,45 @@ A **corpus** is a big collection of text (e.g. all of Arabic Wikipedia). Raw cor
 
 ---
 
-*Next sections (coming in M1): fonts and licenses, shaping with HarfBuzz, augmentation, and dataset files.*
+## 4. Fonts: variety is the point
+
+A model trained on one font learns *that font*, not Arabic. Show it 50 fonts and it has to learn what all the shapes of ب have in common. That's why the font list (`training/configs/fonts.yaml`) mixes styles:
+
+| Style | What it is | Why we need it |
+|---|---|---|
+| Naskh | the standard book/newspaper style | most printed Arabic |
+| Sans / modern | clean UI fonts (Noto Sans, Vazirmatn, Cairo…) | screenshots, websites, modern documents |
+| Kufi | geometric, angular | headings, signs, logos |
+| Ruqaa | everyday handwriting style | some print and posters |
+| Nastaliq | Urdu/Persian calligraphic style, slanted words | Urdu text (not a v1 accuracy target) |
+| Display | decorative headline fonts | robustness; sampled rarely |
+
+Each font has a **sampling weight**: common, realistic fonts are picked more often than decorative ones. A family's weight is split across its files, so a family with 8 weights (Thin to Black) isn't picked 8× as often.
+
+**Licenses.** All 50 families come from the Google Fonts repository and are under the SIL Open Font License. The downloader refuses any font whose license isn't on our allowed list. Fonts are only used to *make* training images; they're never shipped in the app.
+
+**Coverage.** Not every font can draw every character. Many fonts lack Urdu letters like ٹ ڈ ڑ, or the Arabic decimal separator ٫. The manifest (`training/fonts.json`) records, for each font file, which of our symbols it can't draw, and the generator only picks a font that can draw every character in the line. If it drew a missing character anyway, the image would show an empty box (".notdef") while the label says ٹ.
+
+**A trap found by looking: fonts that lie about digits.** During visual inspection, the font Zain drew `٤٠٠` (Arabic-Indic digits) with the *same shapes* as `400`. The label said one thing and the image showed another. Training on that would teach the model to read `400` as `٤٠٠`. The downloader now renders each Arabic digit next to its Western twin and, if they're pixel-identical, marks both as "can't draw" for that font. This is the kind of bug only visual inspection finds, which is why M1 requires a manual check of 200 samples.
+
+**Known ambiguity: ١ vs ۱.** Arabic-Indic and Persian digits look identical for 0, 1, 2, 3, 7, 8 and 9; only 4, 5 and 6 differ. The model has to use context (Persian letters nearby suggest Persian digits). This is unavoidable, and evaluation may treat them as equal.
+
+---
+
+## 5. Rendering: from text to image, correctly shaped
+
+Arabic letters change shape depending on their neighbours: ع looks different at the start, middle, and end of a word. Letters join, some pairs form ligatures (ل + ا → لا), and diacritics must sit above or below the right letter. Doing this is called **shaping**, and it's hard. We use **HarfBuzz**, the shaping engine inside Chrome, Firefox, and Android. Never draw Arabic without it: drawing the letters one by one gives disconnected, wrong shapes.
+
+The renderer (`training/render.py`) does three steps:
+
+1. **Direction runs (bidi).** Arabic is right-to-left, but numbers inside it read left-to-right: `سنة 2026` must show `2026`, not `6202`. The Unicode Bidirectional Algorithm decides which characters belong to a left-to-right number. It has surprising rules. For example, after Arabic text, `50%` is displayed as `%50`, because the percent sign stops being part of the number. We implement the algorithm exactly for the characters in our charset, and we checked it against an independent reference implementation on 20,000 random strings with zero differences. Getting this right matters: real documents were displayed by programs that follow these rules, so our synthetic images must too.
+2. **Shaping (HarfBuzz).** Each run becomes a list of glyphs (font shapes) with exact positions.
+3. **Rasterizing (FreeType).** Each glyph is drawn as a grayscale bitmap and pasted at its position.
+
+The output is an **ink image**: 0 = no ink, 255 = full ink. Turning that into realistic paper, screens, blur and noise is the job of augmentation (next section, coming soon).
+
+**Checking by eye.** `uv run python -m training.inspect_samples` writes `data/inspect/index.html`. Under every rendered image it shows the label as text drawn by your browser, which is a completely separate shaping engine. If the two disagree on letters, diacritics, word order, or numbers, something is wrong. Automated tests catch crashes; only eyes catch "this looks plausible but says the wrong thing".
+
+---
+
+*Next sections (coming in M1): augmentation and dataset files.*
