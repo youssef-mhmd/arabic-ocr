@@ -7,6 +7,7 @@ Reads every shard (labels and metadata; images are only size-checked) and verifi
 - the manifest says "complete" and its charset fingerprint matches the code;
 - every shard has the expected number of samples, each with png + txt + json;
 - every label is normalized and uses only charset symbols;
+- every label only uses characters its font draws correctly (per fonts.json);
 - every image is a grayscale PNG of the configured height.
 
 Then prints statistics that show what the model will learn from: line lengths,
@@ -28,6 +29,7 @@ from pathlib import Path
 
 from arabic_ocr import charset
 from training.dataset import SPLITS, charset_fingerprint
+from training.fonts import MANIFEST as FONTS_MANIFEST
 
 _DIGITS = set(
     charset.WESTERN_DIGITS + charset.ARABIC_INDIC_DIGITS + charset.EASTERN_ARABIC_INDIC_DIGITS
@@ -43,13 +45,15 @@ def png_size(data: bytes) -> tuple[int, int, int]:
     return width, height, color_type
 
 
-def check_shard(path: Path, height: int) -> dict:
+def check_shard(path: Path, height: int, font_missing: dict[str, frozenset[str]]) -> dict:
     errors: list[str] = []
     parts: dict[str, set[str]] = {}
     lengths: Counter = Counter()
     styles: Counter = Counter()
     widths: list[int] = []
     n_marks = n_digits = n_persian = 0
+    labels: dict[str, str] = {}
+    fonts: dict[str, str] = {}
     with tarfile.open(path) as tar:
         for m in tar:
             key, _, ext = m.name.rpartition(".")
@@ -60,6 +64,7 @@ def check_shard(path: Path, height: int) -> dict:
             data = f.read()
             if ext == "txt":
                 label = data.decode("utf-8")
+                labels[key] = label
                 if charset.normalize(label) != label:
                     errors.append(f"{key}: label not normalized")
                 if bad := charset.unsupported_chars(label):
@@ -70,7 +75,9 @@ def check_shard(path: Path, height: int) -> dict:
                 n_digits += bool(chars & _DIGITS)
                 n_persian += bool(chars & _PERSIAN_URDU)
             elif ext == "json":
-                styles[json.loads(data)["style"]] += 1
+                meta = json.loads(data)
+                styles[meta["style"]] += 1
+                fonts[key] = meta["font"]
             elif ext == "png":
                 w, h, color = png_size(data)
                 if h != height or color != 0:  # color type 0 = grayscale
@@ -79,6 +86,13 @@ def check_shard(path: Path, height: int) -> dict:
     for key, exts in parts.items():
         if exts != {"png", "txt", "json"}:
             errors.append(f"{key}: has {sorted(exts)}")
+    # Every character must be one the sample's font draws correctly (per fonts.json).
+    for key, label in labels.items():
+        font = fonts.get(key)
+        if font not in font_missing:
+            errors.append(f"{key}: font {font} is not in fonts.json")
+        elif bad := set(label) & font_missing[font]:
+            errors.append(f"{key}: {font} can't draw {''.join(sorted(bad))} correctly")
     return {
         "count": len(parts),
         "errors": errors,
@@ -109,6 +123,11 @@ def main(argv: list[str] | None = None) -> int:
         problems.append(f"manifest status is {manifest['status']!r}")
     if manifest["charset"] != charset_fingerprint():
         problems.append("charset fingerprint differs from the current charset.py")
+    font_missing = {
+        f["filename"]: frozenset(f["missing"])
+        for fam in json.loads(FONTS_MANIFEST.read_text(encoding="utf-8"))["families"]
+        for f in fam["files"]
+    }
 
     for split in SPLITS:
         shards = sorted((args.dataset / split).glob("shard-*.tar"))
@@ -119,7 +138,10 @@ def main(argv: list[str] | None = None) -> int:
             problems.append(f"{split}: {len(shards)} shards, expected {expected_shards}")
 
         with ProcessPoolExecutor(max_workers=args.workers) as pool:
-            results = list(pool.map(check_shard, shards, [cfg["image_height"]] * len(shards)))
+            n = len(shards)
+            results = list(
+                pool.map(check_shard, shards, [cfg["image_height"]] * n, [font_missing] * n)
+            )
 
         total = sum(r["count"] for r in results)
         if total != cfg["samples"][split]:

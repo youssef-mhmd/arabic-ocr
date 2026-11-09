@@ -126,6 +126,34 @@ def test_fonts_with_western_looking_arabic_digits_are_excluded():
     assert "٤" in regular["missing"] and "4" in regular["missing"]
 
 
+def test_no_font_draws_two_different_digits_the_same_way():
+    """For every installed font, the digits it may be used for must look different
+    after shaping. Found by the owner's manual review: Zain Italic drew ٢٠١٤ as 2014,
+    and Qahiri / Reem Kufi / Baloo Bhaijaan drew some Arabic-Indic digits exactly like
+    Persian ones."""
+    from arabic_ocr import charset
+    from training.fonts import load_fonts
+
+    W, A, E = (
+        charset.WESTERN_DIGITS,
+        charset.ARABIC_INDIC_DIGITS,
+        charset.EASTERN_ARABIC_INDIC_DIGITS,
+    )
+    fonts = load_fonts()
+    if not fonts:
+        pytest.skip("no fonts installed")
+    for font in fonts:
+        for i in range(10):
+            pairs = [(W[i], A[i]), (W[i], E[i])] + ([(A[i], E[i])] if i in (4, 5, 6) else [])
+            for a, b in pairs:
+                if a in font.missing or b in font.missing:
+                    continue
+                ia = render_line("ب " + a, font.path, size_px=40, padding=0)
+                ib = render_line("ب " + b, font.path, size_px=40, padding=0)
+                same = ia.shape == ib.shape and np.array_equal(ia, ib)
+                assert not same, f"{font.path.name} draws {a} and {b} identically"
+
+
 def test_font_manifest_is_complete_and_licensed():
     manifest = json.loads((ROOT / "training" / "fonts.json").read_text(encoding="utf-8"))
     licenses = (ROOT / "data" / "LICENSES.md").read_text(encoding="utf-8")

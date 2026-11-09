@@ -29,9 +29,11 @@ import urllib.request
 from pathlib import Path
 
 import freetype
+import numpy as np
 import yaml
 
 from arabic_ocr import charset
+from training.render import render_line
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "training" / "configs" / "fonts.yaml"
@@ -99,33 +101,40 @@ def parse_metadata(text: str) -> dict:
     }
 
 
-def _glyph_bitmap(face: freetype.Face, ch: str) -> tuple:
-    face.load_char(ch, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_NO_HINTING)
-    bmp = face.glyph.bitmap
-    return (bmp.width, bmp.rows, bytes(bmp.buffer))
+def _shaped(font_path: Path, text: str) -> np.ndarray:
+    """The digit exactly as training images draw it: through HarfBuzz shaping, after
+    an Arabic word (fonts may swap digit shapes in Arabic context)."""
+    return render_line(text, font_path, size_px=40, padding=0)
 
 
-def lookalike_digits(face: freetype.Face, covered: set[str]) -> set[str]:
-    """Digits whose Arabic and Western versions are drawn identically.
+def lookalike_digits(font_path: Path, covered: set[str]) -> set[str]:
+    """Digits that this font draws identically to a digit from another set.
 
-    Some fonts draw ٤ (Arabic-Indic four) with the same shape as 4. An image of that
-    would be labeled ٤ while showing 4, which teaches the model the wrong thing. We
-    can't tell which shape is the "real" one, so both are treated as missing.
+    Examples found in our fonts: Zain Italic draws ٤ exactly like 4; Qahiri draws
+    Arabic-Indic ٤ ٥ ٦ exactly like Persian ۴ ۵ ۶. An image of that would be labeled
+    ٤ while showing 4 (or ۴), which teaches the model the wrong thing. We can't tell
+    which shape is the "real" one, so both digits are treated as missing.
+
+    Arabic-Indic and Persian 0-3 and 7-9 really are the same shapes, so only 4, 5 and
+    6 are compared between those two sets.
     """
-    face.set_pixel_sizes(0, 40)
     bad: set[str] = set()
-    for western, arabic, eastern in zip(
-        charset.WESTERN_DIGITS,
-        charset.ARABIC_INDIC_DIGITS,
-        charset.EASTERN_ARABIC_INDIC_DIGITS,
-        strict=True,
+    for i, (western, arabic, eastern) in enumerate(
+        zip(
+            charset.WESTERN_DIGITS,
+            charset.ARABIC_INDIC_DIGITS,
+            charset.EASTERN_ARABIC_INDIC_DIGITS,
+            strict=True,
+        )
     ):
-        if western not in covered:
-            continue
-        w = _glyph_bitmap(face, western)
-        for other in (arabic, eastern):
-            if other in covered and _glyph_bitmap(face, other) == w:
-                bad |= {western, other}
+        pairs = [(western, arabic), (western, eastern)]
+        if i in (4, 5, 6):
+            pairs.append((arabic, eastern))
+        for a, b in pairs:
+            if a in covered and b in covered:
+                ia, ib = _shaped(font_path, "ب " + a), _shaped(font_path, "ب " + b)
+                if ia.shape == ib.shape and np.array_equal(ia, ib):
+                    bad |= {a, b}
     return bad
 
 
@@ -133,7 +142,7 @@ def missing_symbols(font_path: Path) -> str:
     """Charset symbols this font can't draw correctly (as one string)."""
     face = freetype.Face(str(font_path))
     covered = {chr(code) for code, _ in face.get_chars()}
-    bad = lookalike_digits(face, covered)
+    bad = lookalike_digits(font_path, covered)
     return "".join(s for s in charset.SYMBOLS if s != " " and (s not in covered or s in bad))
 
 

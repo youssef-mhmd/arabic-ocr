@@ -6,6 +6,8 @@ Usage:
     uv run python -m training.inspect_samples --each-font        # one line per font file
     uv run python -m training.inspect_samples -n 200 --augment   # as the model will see them
     uv run python -m training.inspect_samples -n 200 --dataset data/datasets/v1   # stored samples
+    uv run python -m training.inspect_samples -n 100 --dataset data/datasets/v1
+        --contains "[0-9٠-٩۰-۹]" --out digits.html          # (one line) number lines only
 
 Open data/inspect/index.html in a browser. Each row shows the rendered image and,
 next to it, the label as text drawn by the browser (a different shaping engine), so
@@ -21,6 +23,7 @@ import html
 import io
 import json
 import random
+import re
 import tarfile
 from pathlib import Path
 
@@ -79,11 +82,17 @@ def main(argv: list[str] | None = None) -> int:
         "--dataset", type=Path, help="show random samples from a generated dataset folder instead"
     )
     parser.add_argument("--split", default="train", help="dataset split for --dataset")
+    parser.add_argument(
+        "--contains", help="with --dataset: only labels matching this regex (e.g. digits)"
+    )
+    parser.add_argument("--out", default="index.html", help="file name in data/inspect/")
     args = parser.parse_args(argv)
 
     if args.dataset:
-        rows = dataset_rows(args.dataset, args.split, args.n, random.Random(args.seed))
-        return write_page(rows, args.seed)
+        rows = dataset_rows(
+            args.dataset, args.split, args.n, random.Random(args.seed), args.contains
+        )
+        return write_page(rows, args.seed, args.out)
 
     rng = random.Random(args.seed)
     np_rng = np.random.default_rng(args.seed)
@@ -116,18 +125,20 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
 
-    return write_page(rows, args.seed)
+    return write_page(rows, args.seed, args.out)
 
 
-def write_page(rows: list[str], seed: int) -> int:
+def write_page(rows: list[str], seed: int, name: str = "index.html") -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    out = OUT_DIR / "index.html"
+    out = OUT_DIR / name
     out.write_text(PAGE.format(count=len(rows), seed=seed, rows="\n".join(rows)), encoding="utf-8")
     print(f"{len(rows)} lines -> {out}")
     return 0
 
 
-def dataset_rows(dataset_dir: Path, split: str, n: int, rng: random.Random) -> list[str]:
+def dataset_rows(
+    dataset_dir: Path, split: str, n: int, rng: random.Random, contains: str | None = None
+) -> list[str]:
     """`n` random samples from a dataset's shards, exactly as stored (no re-rendering)."""
     shards = sorted((dataset_dir / split).glob("shard-*.tar"))
     if not shards:
@@ -147,7 +158,10 @@ def dataset_rows(dataset_dir: Path, split: str, n: int, rng: random.Random) -> l
                 f = tar.extractfile(m)
                 if f is not None:
                     files.setdefault(key, {})[ext] = f.read()
-        for key in rng.sample(sorted(files), min(k, len(files))):
+        keys = sorted(files)
+        if contains:
+            keys = [k_ for k_ in keys if re.search(contains, files[k_]["txt"].decode("utf-8"))]
+        for key in rng.sample(keys, min(k, len(keys))):
             meta = json.loads(files[key]["json"])
             src = "data:image/png;base64," + base64.b64encode(files[key]["png"]).decode("ascii")
             rows.append(

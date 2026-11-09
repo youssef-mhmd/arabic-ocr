@@ -82,14 +82,17 @@ def config_hash(cfg: dict) -> str:
 
 
 def code_hash() -> str:
-    """Fingerprint of the code that turns text into images.
+    """Fingerprint of the code (and font manifest) that turns text into images.
 
     If any of it changes, existing shards were made differently, so resuming would
     mix two kinds of data in one dataset.
     """
-    files = sorted((ROOT / "training").glob("*.py")) + sorted(
-        (ROOT / "src" / "arabic_ocr").glob("*.py")
-    )
+    # fonts.json counts as code here: it decides which font may draw which character.
+    files = [
+        *sorted((ROOT / "training").glob("*.py")),
+        *sorted((ROOT / "src" / "arabic_ocr").glob("*.py")),
+        ROOT / "training" / "fonts.json",
+    ]
     h = hashlib.sha1()
     for f in files:
         h.update(f.name.encode())
