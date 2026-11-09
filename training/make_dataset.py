@@ -81,6 +81,23 @@ def config_hash(cfg: dict) -> str:
     return hashlib.sha1(json.dumps(cfg, sort_keys=True).encode("utf-8")).hexdigest()[:12]
 
 
+def code_hash() -> str:
+    """Fingerprint of the code that turns text into images.
+
+    If any of it changes, existing shards were made differently, so resuming would
+    mix two kinds of data in one dataset.
+    """
+    files = sorted((ROOT / "training").glob("*.py")) + sorted(
+        (ROOT / "src" / "arabic_ocr").glob("*.py")
+    )
+    h = hashlib.sha1()
+    for f in files:
+        h.update(f.name.encode())
+        # Normalize line endings so the same code gives the same hash on every OS.
+        h.update(f.read_bytes().replace(b"\r\n", b"\n"))
+    return h.hexdigest()[:12]
+
+
 def shard_seed(base_seed: int, split: str, index: int) -> int:
     """A different, reproducible seed for every shard."""
     digest = hashlib.sha256(f"{base_seed}/{split}/{index}".encode()).digest()
@@ -105,8 +122,8 @@ class TextPicker:
         if not self.files:
             raise FileNotFoundError(f"no prepared text for split '{split}' in {corpora_dir}")
 
-    def pick(self, rng: random.Random) -> str:
-        return rng.choices(self.files, weights=self.weights)[0].random_line(rng)
+    def pick_source(self, rng: random.Random) -> LineFile:
+        return rng.choices(self.files, weights=self.weights)[0]
 
 
 # Each worker process opens the corpus files once and reuses them for every shard.
@@ -167,7 +184,9 @@ def make_shard(
             attempts += 1
             if attempts > count * 20:
                 raise RuntimeError(f"{split} shard {index}: too many failed samples")
-            line = sampler.sample(texts.pick(rng))
+            # Short paragraphs are continued with more text from the same corpus.
+            source = texts.pick_source(rng)
+            line = sampler.sample(source.random_line(rng), more=lambda s=source: s.random_line(rng))
             if line is None:
                 continue
             font = picker.pick(line)
@@ -212,7 +231,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if manifest_path.exists():
         old = json.loads(manifest_path.read_text(encoding="utf-8"))
-        if old["config_hash"] != chash or old["charset"] != charset_fingerprint():
+        if (
+            old["config_hash"] != chash
+            or old["charset"] != charset_fingerprint()
+            or old.get("code_hash") != code_hash()
+        ):
             if not args.overwrite:
                 print(
                     f"{out_dir} was made with different settings. "
@@ -243,6 +266,7 @@ def main(argv: list[str] | None = None) -> int:
         "config_hash": chash,
         "charset": charset_fingerprint(),
         "num_classes": charset.NUM_CLASSES,
+        "code_hash": code_hash(),
         "fonts_commit": json.loads(FONTS_MANIFEST.read_text(encoding="utf-8"))["source_commit"],
         "paragraphs": paragraphs,
         "samples": {},

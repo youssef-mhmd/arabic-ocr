@@ -129,12 +129,15 @@ def test_generate_read_resume(tmp_path):
         assert s.image.shape[0] == 64 and s.image.dtype == np.uint8
         assert charset.decode(charset.encode(s.label)) == s.label
 
-    # No leaks: every line comes from a paragraph of its own split.
+    # No leaks: every word of every line comes from its own split's paragraphs. (A
+    # line may join two paragraphs, so it isn't always a substring of one.)
     for split, items in samples.items():
         text = corpora.split_file("sample", split, corpora_dir).read_text(encoding="utf-8")
-        pool = [charset.strip_diacritics(x) for x in text.splitlines()]
+        vocab = set(charset.strip_diacritics(text).split())
         for s in items:
-            assert any(charset.strip_diacritics(s.label) in sent for sent in pool), s.label
+            words = charset.strip_diacritics(s.label).split()
+            # the last word may be cut at max_len, so check whole words only
+            assert all(w in vocab for w in words[:-1]), s.label
 
     # Resume: delete one shard; re-running re-makes it byte-for-byte identical.
     first = shard_paths(ds, "train")[0]

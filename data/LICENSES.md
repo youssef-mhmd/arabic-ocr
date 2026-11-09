@@ -15,7 +15,7 @@ Source names match `training/configs/corpora.yaml`.
 | `wikipedia_ur` | text | Urdu Wikipedia, same dataset, `20231101.ur` | CC BY-SA 4.0 | Yes, with attribution | as above |
 | `wikisource_ar` | text | Arabic Wikisource, plain-text extract [wikimedia/wikisource](https://huggingface.co/datasets/wikimedia/wikisource) `20231201.ar` | CC BY-SA 4.0 (texts mostly public domain) | Yes, with attribution | Main source of diacritized classical text |
 | `wikisource_ar_tashkeel` | text | Subset of `wikisource_ar`: paragraphs with ≥ 0.3 diacritics per letter | CC BY-SA 4.0 | Yes, with attribution | Same text as `wikisource_ar`, filtered so diacritized text can be weighted up |
-| `tanzil_quran` | text | Tanzil Quran text, "simple" script, [tanzil.net](https://tanzil.net/docs/text_license) | CC BY 3.0 + Tanzil terms (verbatim copies only; credit Tanzil Project with a link) | Yes, with attribution | Fully diacritized. Used only to render images; the text is never shipped or modified in distribution. Download requires `--accept-tanzil-terms` |
+| `tanzil_quran` | text | Tanzil Quran text, "simple" script, [tanzil.net](https://tanzil.net/docs/text_license) | CC BY 3.0 + Tanzil terms (verbatim copies only; credit Tanzil Project with a link) | Yes, with attribution | Fully diacritized. Used only to render images; the text is never shipped or modified in distribution. Download requires `--accept-tanzil-terms` (accepted by the project owner 2026-11-09). The Tanzil copyright notice is saved as `data/corpora/tanzil_quran/NOTICE.txt` and must accompany any dataset built from it if that dataset is ever shared |
 | `sample` | text | `training/samples/sample_text.txt` (written for this project) | Apache-2.0 | Yes | Pipeline tests |
 
 ### Considered and not used

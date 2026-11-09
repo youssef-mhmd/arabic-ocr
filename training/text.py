@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import random
 import re
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
 
 from arabic_ocr import charset
@@ -144,26 +144,52 @@ class LineSampler:
 
     # --- main -----------------------------------------------------------------
 
-    def sample(self, segment: str) -> str | None:
-        """One line from a clean segment, or None if the segment can't give one."""
+    def _start_for(self, words: list[str], target: int) -> int:
+        """A random start word that leaves enough text to reach `target` characters.
+
+        Starting anywhere would often land near the end of a paragraph and give a
+        line much shorter than intended.
+        """
+        remaining, total = [], -1
+        for word in reversed(words):  # characters from each word to the end
+            total += len(word) + 1
+            remaining.append(total)
+        remaining.reverse()
+        good = [i for i, r in enumerate(remaining) if r >= target]
+        return self.rng.choice(good) if good else 0
+
+    def sample(self, segment: str, more: Callable[[], str] | None = None) -> str | None:
+        """One line from a clean segment, or None if the segment can't give one.
+
+        `more`, if given, returns another paragraph (from the same split). It is used
+        when `segment` is too short for the chosen length, so that short paragraphs
+        (titles, list items) don't make every line short.
+        """
         cfg, rng = self.config, self.rng
-        words = segment.split(" ")
 
         if rng.random() < cfg.short_prob:
             target = rng.randint(cfg.min_len, min(5, cfg.max_len))
         else:
             target = rng.randint(cfg.min_len, cfg.max_len)
 
+        # Decide on diacritics first: stripping them shortens the text, so the
+        # length target must be measured on the final text.
+        strip = rng.random() < cfg.strip_diacritics_prob
+        text = segment
+        for _ in range(5):
+            if strip:
+                text = re.sub(" +", " ", charset.strip_diacritics(text)).strip()
+            if len(text) >= target or more is None:
+                break
+            text = text + " " + more()
+        if not text:
+            return None
+        words = text.split(" ")
+
         if rng.random() < cfg.number_prob:
-            words = list(words)
             words.insert(rng.randint(0, len(words)), self.random_number())
 
-        start = rng.randrange(len(words))
-        line = self._take_words(words, start, target)
-
-        if rng.random() < cfg.strip_diacritics_prob:
-            line = charset.strip_diacritics(line)
-            line = re.sub(" +", " ", line).strip()
+        line = self._take_words(words, self._start_for(words, target), target)
 
         # A single word longer than max_len: cut it at the limit. The label stays
         # correct because we render exactly this cut string.

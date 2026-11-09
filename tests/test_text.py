@@ -1,5 +1,7 @@
 """Tests for corpus cleaning and the line sampler."""
 
+import random
+
 from arabic_ocr import charset
 from training.text import LineSampler, SamplerConfig, arabic_ratio, clean_text
 
@@ -90,6 +92,23 @@ def test_lengths_cover_the_range():
     lengths = [len(line) for line in _many_lines(n=3000)]
     assert min(lengths) <= 3
     assert max(lengths) >= 50
+
+
+def test_lengths_are_spread_evenly_when_text_is_plentiful():
+    # Found in the first 1M dataset: 38% of lines were under 10 characters because
+    # lines started near paragraph ends and short paragraphs were used as-is.
+    rng = random.Random(0)
+    pool = [*SEGMENTS, "عنوان قصير", "قائمة", "سطر"]  # short paragraphs, like Wikipedia
+    sampler = LineSampler(SamplerConfig(number_prob=0.0), seed=0)
+    lengths = []
+    for _ in range(3000):
+        line = sampler.sample(rng.choice(pool), more=lambda: rng.choice(pool))
+        if line:
+            lengths.append(len(line))
+    short = sum(n < 10 for n in lengths) / len(lengths)
+    long = sum(n >= 40 for n in lengths) / len(lengths)
+    assert short < 0.25, short
+    assert long > 0.25, long
 
 
 def test_max_len_respected():

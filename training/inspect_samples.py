@@ -5,6 +5,7 @@ Usage:
     uv run python -m training.inspect_samples -n 200 --seed 3
     uv run python -m training.inspect_samples --each-font        # one line per font file
     uv run python -m training.inspect_samples -n 200 --augment   # as the model will see them
+    uv run python -m training.inspect_samples -n 200 --dataset data/datasets/v1   # stored samples
 
 Open data/inspect/index.html in a browser. Each row shows the rendered image and,
 next to it, the label as text drawn by the browser (a different shaping engine), so
@@ -18,7 +19,9 @@ import argparse
 import base64
 import html
 import io
+import json
 import random
+import tarfile
 from pathlib import Path
 
 import numpy as np
@@ -72,7 +75,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--each-font", action="store_true", help="one line per font file")
     parser.add_argument("--augment", action="store_true", help="apply training augmentation")
     parser.add_argument("--text", type=Path, default=SAMPLE_TEXT, help="UTF-8 text file")
+    parser.add_argument(
+        "--dataset", type=Path, help="show random samples from a generated dataset folder instead"
+    )
+    parser.add_argument("--split", default="train", help="dataset split for --dataset")
     args = parser.parse_args(argv)
+
+    if args.dataset:
+        rows = dataset_rows(args.dataset, args.split, args.n, random.Random(args.seed))
+        return write_page(rows, args.seed)
 
     rng = random.Random(args.seed)
     np_rng = np.random.default_rng(args.seed)
@@ -105,13 +116,51 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
 
+    return write_page(rows, args.seed)
+
+
+def write_page(rows: list[str], seed: int) -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     out = OUT_DIR / "index.html"
-    out.write_text(
-        PAGE.format(count=len(rows), seed=args.seed, rows="\n".join(rows)), encoding="utf-8"
-    )
+    out.write_text(PAGE.format(count=len(rows), seed=seed, rows="\n".join(rows)), encoding="utf-8")
     print(f"{len(rows)} lines -> {out}")
     return 0
+
+
+def dataset_rows(dataset_dir: Path, split: str, n: int, rng: random.Random) -> list[str]:
+    """`n` random samples from a dataset's shards, exactly as stored (no re-rendering)."""
+    shards = sorted((dataset_dir / split).glob("shard-*.tar"))
+    if not shards:
+        raise SystemExit(f"no shards in {dataset_dir / split}")
+    # Spread the picks over many shards; within a shard, pick random samples.
+    picks: dict[Path, int] = {}
+    for _ in range(n):
+        shard = rng.choice(shards)
+        picks[shard] = picks.get(shard, 0) + 1
+
+    rows = []
+    for shard, k in sorted(picks.items()):
+        files: dict[str, dict[str, bytes]] = {}
+        with tarfile.open(shard) as tar:
+            for m in tar:
+                key, _, ext = m.name.rpartition(".")
+                f = tar.extractfile(m)
+                if f is not None:
+                    files.setdefault(key, {})[ext] = f.read()
+        for key in rng.sample(sorted(files), min(k, len(files))):
+            meta = json.loads(files[key]["json"])
+            src = "data:image/png;base64," + base64.b64encode(files[key]["png"]).decode("ascii")
+            rows.append(
+                ROW.format(
+                    n=len(rows) + 1,
+                    src=src,
+                    label=html.escape(files[key]["txt"].decode("utf-8")),
+                    font=html.escape(f"{key} · {meta['family']} — {meta['font']}"),
+                    size=meta["size_px"],
+                    style=meta["style"],
+                )
+            )
+    return rows
 
 
 if __name__ == "__main__":

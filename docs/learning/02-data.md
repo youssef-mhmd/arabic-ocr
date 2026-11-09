@@ -199,3 +199,7 @@ uv run python -m training.make_dataset training/configs/data_sample.yaml
 ```
 
 Speed on a normal PC: about 200 images/second per CPU core, so 1M images take roughly 10 minutes on 8+ cores.
+
+**Always check the statistics, not just the samples.** `uv run python -m training.check_dataset data/datasets/v1` reads every label in the dataset (about 20 seconds for 1M), verifies it, and prints what the model will actually learn from. The first full run passed every correctness check but showed that **38% of lines were under 10 characters**: lines often started near the end of a paragraph, many Wikipedia "paragraphs" are just titles, and stripping diacritics after cutting shortened lines further. A model trained on that would be weak on full-length book lines. After fixing the sampler, lengths are spread evenly (23% under 10, 29% at 40+). Every sample looked fine one by one; only the totals showed the problem.
+
+**v1 at a glance** (1,000,000 train / 10,000 val / 10,000 test, 11 GB, ~15 minutes on 15 cores): 15% of lines have diacritics, 16% have digits, 23% have Persian/Urdu letters; fonts are about half sans, a quarter Naskh, and the rest Kufi, display, Ruqaa, Nastaliq.

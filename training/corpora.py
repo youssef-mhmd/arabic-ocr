@@ -218,6 +218,14 @@ def prepare(source: dict, default_split: dict, corpora_dir: Path = CORPORA_DIR) 
     for s in SPLITS:
         tmp[s].replace(out_dir / f"{s}.txt")
 
+    if source["kind"] == "tanzil":
+        # Tanzil's terms: the copyright notice must be reproduced in all files derived
+        # from the text. Keep it next to the prepared files (and ship it with any
+        # dataset built from them, should one ever be shared).
+        raw_text = (RAW_DIR / source["name"] / "quran-simple.txt").read_text(encoding="utf-8")
+        notice = [line for line in raw_text.splitlines() if line.startswith("#")]
+        (out_dir / "NOTICE.txt").write_text("\n".join(notice) + "\n", encoding="utf-8")
+
     result = {
         "name": source["name"],
         "license": source["license"],
