@@ -55,6 +55,7 @@ Because the owner is new to machine learning, the project is built in small, tes
 | Model runtime (inference) | **ONNX Runtime** | Small, fast on CPU, identical on Win/Mac/Linux; end users never need to install PyTorch |
 | Image processing | **OpenCV**, **NumPy**, **Pillow** | Standard, cross-platform wheels |
 | Arabic text rendering (synthetic data) | **uharfbuzz** + **freetype-py** | Correct Arabic shaping (joined letter forms, ligatures, diacritic placement) |
+| Corpus files (synthetic data) | **pyarrow** | Reads the Parquet text extracts Wikimedia publishes (data generation only, not shipped) |
 | PDF input / output | **pypdfium2** (read/render), **pikepdf** (write text layer) | Permissive licenses, cross-platform |
 | CLI | **Typer** | Simple, auto-generated help |
 | Local HTTP API | **FastAPI** + **uvicorn** | Simple, typed, auto docs |
@@ -135,7 +136,8 @@ ML models learn from examples, so data is the biggest part of this project.
 
 ### 7.1 Synthetic data (main source for v1)
 We generate millions of labeled line images by rendering real Arabic text with real fonts. The label is free because we know what text we rendered.
-- **Text sources:** Arabic Wikipedia dump, Tashkeela corpus (diacritized text), OpenITI (classical Arabic), Persian/Urdu Wikipedia for the extended letters.
+- **Text sources:** Arabic, Persian and Urdu Wikipedia (CC BY-SA 4.0), Arabic Wikisource for classical and diacritized text (CC BY-SA 4.0), and the Tanzil Quran text for fully diacritized text (CC BY 3.0 + Tanzil terms). All are listed in `training/configs/corpora.yaml` and `data/LICENSES.md`.
+  - *Decided 2026-11-09 (M1):* Tashkeela (GPLv2) and OpenITI (CC BY-NC-SA 4.0) were dropped from training. Their licenses conflict with releasing the model for any use. They may only be used for private evaluation.
 - **Fonts (open licenses, mostly SIL OFL):** Amiri, Noto Naskh Arabic, Noto Kufi Arabic, Noto Nastaliq Urdu, Scheherazade New, Lateef, Cairo, Tajawal, Almarai, Markazi Text, Reem Kufi, Vazirmatn, IBM Plex Sans Arabic, and others. Target: 50+ fonts.
 - **Augmentations:** blur, noise, JPEG artifacts, rotation/skew, perspective, paper textures, shadows, low resolution, ink bleed, and screenshot-style UI backgrounds.
 

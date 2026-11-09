@@ -14,7 +14,7 @@ arabic-ocr is an Arabic-script OCR engine built from scratch: we design and trai
 ## Stack (do not change without updating the PRD)
 - **Python, managed with uv only.** Use `uv add`, `uv run`, `uv sync`. Never use pip, poetry, conda, or requirements.txt.
 - Training: **PyTorch** (`train` dependency group). Shipped runtime: **ONNX Runtime**. The `arabic_ocr` runtime package must **never import torch**.
-- Images: OpenCV, NumPy, Pillow. Arabic rendering: **uharfbuzz + freetype-py**. Never render Arabic text without HarfBuzz shaping.
+- Images: OpenCV, NumPy, Pillow. Arabic rendering: **uharfbuzz + freetype-py**. Never render Arabic text without HarfBuzz shaping. Corpus Parquet files: pyarrow (`data` group).
 - PDF: pypdfium2 (read), pikepdf (write). CLI: Typer. API: FastAPI. GUI: PySide6. Packaging: PyInstaller via GitHub Actions.
 - Tests: pytest. Lint/format: ruff.
 

@@ -6,15 +6,10 @@
 name: sample
 seed: 1234
 
-# UTF-8 text files; each line is cleaned and split into source sentences.
-text_files:
-  - training/samples/sample_text.txt
-
-# Share of *source sentences* (not lines) held out for validation and test.
-# The sample text has only ~20 sentences, so these are much larger than usual.
-split:
-  val_frac: 0.15
-  test_frac: 0.15
+# Prepared corpora to draw text from (see training/configs/corpora.yaml) and how
+# often to pick each one. Prepare first: uv run python -m training.corpora prepare sample
+text_sources:
+  - {name: sample, weight: 1.0}
 
 # How many line images to make for each split.
 samples:

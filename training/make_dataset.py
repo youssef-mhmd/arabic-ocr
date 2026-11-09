@@ -6,8 +6,10 @@ Usage:
     uv run python -m training.make_dataset CONFIG --overwrite     # start over
 
 Steps:
-1. Read the text files, clean them into source sentences, and assign every sentence
-   to train/val/test (see training/dataset.py: no sentence is in two splits).
+1. Text comes from prepared corpora (`uv run python -m training.corpora prepare`),
+   which are already cleaned and split into train/val/test paragraphs, so no
+   paragraph is in two splits. `text_sources` says which corpora to use and how
+   often to pick each one.
 2. For each split, make `samples[split]` images in shards of `shard_size`. Each shard
    has its own seed derived from the config seed, so shards can be made in any order,
    in parallel, and re-made identically.
@@ -36,11 +38,12 @@ import yaml
 
 from arabic_ocr import charset
 from training.augment import AugmentConfig, augment
-from training.dataset import SPLITS, ShardWriter, charset_fingerprint, split_of
+from training.corpora import CORPORA_DIR, LineFile, split_file
+from training.dataset import SPLITS, ShardWriter, charset_fingerprint
 from training.fonts import MANIFEST as FONTS_MANIFEST
 from training.fonts import FontPicker, load_fonts
 from training.render import MissingGlyphError, render_line
-from training.text import LineSampler, SamplerConfig, clean_text
+from training.text import LineSampler, SamplerConfig
 
 ROOT = Path(__file__).resolve().parent.parent
 DATASETS_DIR = ROOT / "data" / "datasets"
@@ -56,8 +59,7 @@ def load_config(path: Path) -> dict:
     required = {
         "name",
         "seed",
-        "text_files",
-        "split",
+        "text_sources",
         "samples",
         "shard_size",
         "image_height",
@@ -90,19 +92,47 @@ def shard_seed(base_seed: int, split: str, index: int) -> int:
 # ---------------------------------------------------------------------------
 
 
-def load_sentences(cfg: dict) -> dict[str, list[str]]:
-    """Clean all text files and group the sentences by split."""
-    by_split: dict[str, list[str]] = {s: [] for s in SPLITS}
-    seen: set[str] = set()
-    for name in cfg["text_files"]:
-        text = (ROOT / name).read_text(encoding="utf-8")
-        for sentence in clean_text(text):
-            if sentence in seen:  # exact duplicates add nothing
-                continue
-            seen.add(sentence)
-            split = split_of(sentence, cfg["split"]["val_frac"], cfg["split"]["test_frac"])
-            by_split[split].append(sentence)
-    return by_split
+class TextPicker:
+    """Picks a random paragraph: first a corpus (by weight), then a line in it."""
+
+    def __init__(self, sources: list[dict], split: str, corpora_dir: Path) -> None:
+        self.files, self.weights = [], []
+        for src in sources:
+            path = split_file(src["name"], split, corpora_dir)
+            if path.exists() and path.stat().st_size > 0:
+                self.files.append(LineFile(path))
+                self.weights.append(src["weight"])
+        if not self.files:
+            raise FileNotFoundError(f"no prepared text for split '{split}' in {corpora_dir}")
+
+    def pick(self, rng: random.Random) -> str:
+        return rng.choices(self.files, weights=self.weights)[0].random_line(rng)
+
+
+# Each worker process opens the corpus files once and reuses them for every shard.
+_PICKERS: dict[tuple, TextPicker] = {}
+
+
+def text_picker(cfg: dict, split: str, corpora_dir: Path) -> TextPicker:
+    key = (json.dumps(cfg["text_sources"], sort_keys=True), split, str(corpora_dir))
+    if key not in _PICKERS:
+        _PICKERS[key] = TextPicker(cfg["text_sources"], split, corpora_dir)
+    return _PICKERS[key]
+
+
+def text_counts(cfg: dict, corpora_dir: Path) -> dict[str, dict[str, int]]:
+    """Paragraphs available per split and source (0 if not prepared)."""
+    counts: dict[str, dict[str, int]] = {}
+    for split in SPLITS:
+        counts[split] = {}
+        for src in cfg["text_sources"]:
+            path = split_file(src["name"], split, corpora_dir)
+            n = 0
+            if path.exists():
+                with open(path, "rb") as f:
+                    n = sum(1 for _ in f)
+            counts[split][src["name"]] = n
+    return counts
 
 
 # ---------------------------------------------------------------------------
@@ -118,10 +148,11 @@ def resize_to_height(image: np.ndarray, height: int) -> np.ndarray:
 
 
 def make_shard(
-    cfg: dict, split: str, index: int, count: int, sentences: list[str], out: Path
+    cfg: dict, split: str, index: int, count: int, out: Path, corpora_dir: Path = CORPORA_DIR
 ) -> int:
     seed = shard_seed(cfg["seed"], split, index)
     rng = random.Random(seed)
+    texts = text_picker(cfg, split, corpora_dir)
     np_rng = np.random.default_rng(seed)
     sampler = LineSampler(SamplerConfig(**cfg["sampler"]), seed=seed)
     picker = FontPicker(load_fonts(), rng)
@@ -136,7 +167,7 @@ def make_shard(
             attempts += 1
             if attempts > count * 20:
                 raise RuntimeError(f"{split} shard {index}: too many failed samples")
-            line = sampler.sample(rng.choice(sentences))
+            line = sampler.sample(texts.pick(rng))
             if line is None:
                 continue
             font = picker.pick(line)
@@ -171,6 +202,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     parser.add_argument("--overwrite", action="store_true", help="delete existing shards first")
     parser.add_argument("--out-dir", type=Path, default=DATASETS_DIR)
+    parser.add_argument("--corpora-dir", type=Path, default=CORPORA_DIR)
     args = parser.parse_args(argv)
 
     cfg = load_config(args.config)
@@ -192,11 +224,17 @@ def main(argv: list[str] | None = None) -> int:
             for p in (out_dir / split).glob("shard-*.tar*"):
                 p.unlink()
 
-    sentences = load_sentences(cfg)
+    paragraphs = text_counts(cfg, args.corpora_dir)
     for split in SPLITS:
-        if cfg["samples"][split] > 0 and not sentences[split]:
-            print(f"no sentences landed in '{split}'; add more text or raise its fraction")
+        if cfg["samples"][split] > 0 and not any(paragraphs[split].values()):
+            print(
+                f"no prepared text for '{split}'. Run: uv run python -m training.corpora "
+                f"prepare {' '.join(s['name'] for s in cfg['text_sources'])}"
+            )
             return 1
+    for split, per_source in paragraphs.items():
+        if missing := [n for n, c in per_source.items() if c == 0]:
+            print(f"  note: no {split} text from {', '.join(missing)} (not prepared?)")
 
     manifest = {
         "name": cfg["name"],
@@ -206,7 +244,7 @@ def main(argv: list[str] | None = None) -> int:
         "charset": charset_fingerprint(),
         "num_classes": charset.NUM_CLASSES,
         "fonts_commit": json.loads(FONTS_MANIFEST.read_text(encoding="utf-8"))["source_commit"],
-        "sentences": {s: len(v) for s, v in sentences.items()},
+        "paragraphs": paragraphs,
         "samples": {},
     }
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -220,15 +258,12 @@ def main(argv: list[str] | None = None) -> int:
             count = min(size, total - i * size)
             if not path.exists():
                 jobs.append((split, i, count, path))
-    print(
-        f"{cfg['name']}: sentences {manifest['sentences']}, "
-        f"{len(jobs)} shards to make with {args.workers} workers"
-    )
+    print(f"{cfg['name']}: {len(jobs)} shards to make with {args.workers} workers")
 
     start, done_samples = time.perf_counter(), 0
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
         futures = {
-            pool.submit(make_shard, cfg, split, i, count, sentences[split], path): (split, i)
+            pool.submit(make_shard, cfg, split, i, count, path, args.corpora_dir): (split, i)
             for split, i, count, path in jobs
         }
         for n, fut in enumerate(as_completed(futures), 1):

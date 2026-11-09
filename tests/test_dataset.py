@@ -9,7 +9,7 @@ import pytest
 import yaml
 
 from arabic_ocr import charset
-from training import make_dataset
+from training import corpora, make_dataset
 from training.dataset import ShardWriter, read_shard, read_split, shard_paths, split_of
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -79,8 +79,27 @@ def write_config(tmp_path, **changes) -> Path:
     return path
 
 
-def run(cfg_path, out_dir, *extra):
-    return make_dataset.main([str(cfg_path), "--workers", "1", "--out-dir", str(out_dir), *extra])
+def prepare_sample_corpus(tmp_path) -> Path:
+    corpora_dir = tmp_path / "corpora"
+    cfg = corpora.load_config()
+    sample = next(s for s in cfg["sources"] if s["name"] == "sample")
+    corpora.prepare(sample, cfg["split"], corpora_dir)
+    return corpora_dir
+
+
+def run(cfg_path, tmp_path, *extra):
+    return make_dataset.main(
+        [
+            str(cfg_path),
+            "--workers",
+            "1",
+            "--out-dir",
+            str(tmp_path / "datasets"),
+            "--corpora-dir",
+            str(tmp_path / "corpora"),
+            *extra,
+        ]
+    )
 
 
 def test_config_typos_are_rejected(tmp_path):
@@ -93,9 +112,9 @@ def test_config_typos_are_rejected(tmp_path):
 @pytest.mark.skipif(not HAVE_FONTS, reason="needs data/fonts (see training/download_fonts.py)")
 def test_generate_read_resume(tmp_path):
     cfg_path = write_config(tmp_path)
-    out = tmp_path / "datasets"
-    assert run(cfg_path, out) == 0
-    ds = out / "t"
+    corpora_dir = prepare_sample_corpus(tmp_path)
+    assert run(cfg_path, tmp_path) == 0
+    ds = tmp_path / "datasets" / "t"
 
     manifest = json.loads((ds / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["status"] == "complete"
@@ -110,10 +129,10 @@ def test_generate_read_resume(tmp_path):
         assert s.image.shape[0] == 64 and s.image.dtype == np.uint8
         assert charset.decode(charset.encode(s.label)) == s.label
 
-    # No leaks: every line comes from a sentence of its own split.
-    sentences = make_dataset.load_sentences(make_dataset.load_config(cfg_path))
+    # No leaks: every line comes from a paragraph of its own split.
     for split, items in samples.items():
-        pool = [charset.strip_diacritics(x) for x in sentences[split]]
+        text = corpora.split_file("sample", split, corpora_dir).read_text(encoding="utf-8")
+        pool = [charset.strip_diacritics(x) for x in text.splitlines()]
         for s in items:
             assert any(charset.strip_diacritics(s.label) in sent for sent in pool), s.label
 
@@ -121,11 +140,11 @@ def test_generate_read_resume(tmp_path):
     first = shard_paths(ds, "train")[0]
     original = first.read_bytes()
     first.unlink()
-    assert run(cfg_path, out) == 0
+    assert run(cfg_path, tmp_path) == 0
     assert first.read_bytes() == original
 
     # Changed settings are refused without --overwrite.
     changed = write_config(tmp_path, seed=99)
-    assert run(changed, out) == 1
-    assert run(changed, out, "--overwrite") == 0
+    assert run(changed, tmp_path) == 1
+    assert run(changed, tmp_path, "--overwrite") == 0
     assert first.read_bytes() != original

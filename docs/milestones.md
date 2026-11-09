@@ -29,15 +29,15 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 - [x] `charset.py`: full symbol set (Arabic letters, hamza forms, tashkeel U+064B–U+0652 + U+0670, tatweel, ٠–٩, ۰–۹, 0–9, Arabic punctuation, Persian/Urdu letters), with encode/decode
 - [x] Unicode normalization rules (NFC, presentation forms → base letters, consistent hamza/alef handling); unit tests
-- [ ] Download scripts for corpora: Arabic Wikipedia, Tashkeela, OpenITI subset, Persian/Urdu Wikipedia
+- [x] Download scripts for corpora: Arabic Wikipedia, Arabic Wikisource (+ diacritized subset), Tanzil Quran, Persian/Urdu Wikipedia. *(Tashkeela and OpenITI dropped for license reasons; see PRD §7.1.)*
 - [x] Text cleaning + line sampler (lengths 1–60 chars; mix of with/without diacritics; numbers; punctuation)
 - [x] Font collection (50+ OFL/Apache Arabic fonts) with a `fonts.json` manifest recording each font's license
 - [x] Renderer using uharfbuzz + freetype-py (correct joining, ligatures, mark positioning)
 - [x] Augmentation pipeline: blur, noise, JPEG, skew/rotation, perspective, paper textures, shadows, low DPI, ink bleed, screenshot/UI backgrounds
 - [x] Dataset writer (sharded files, e.g. LMDB or WebDataset tar) + train/val/test split
-- [ ] `data/LICENSES.md`: license for every corpus and font
+- [x] `data/LICENSES.md`: license for every corpus and font
 - [x] Visual inspection notebook/script: render a grid of samples for spot-checking
-- [ ] `docs/learning/02-data.md`
+- [x] `docs/learning/02-data.md`
 
 **Exit criteria:** 1M+ line images generated; a manual check of 200 random samples shows correct shaping and diacritics, with labels matching the images.
 

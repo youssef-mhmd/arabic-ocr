@@ -1,0 +1,78 @@
+# Text corpora for synthetic training data.
+#
+#   uv run python -m training.corpora download            # fetch raw files -> data/corpora/raw/
+#   uv run python -m training.corpora prepare             # clean + split -> data/corpora/<name>/
+#
+# Only sources whose license allows a redistributable model are listed here (PRD §7.2).
+# Every source must also have an entry in data/LICENSES.md.
+#
+# Decided 2026-11-09: Tashkeela (GPLv2) and OpenITI (CC BY-NC-SA 4.0) are NOT used:
+# their licenses conflict with releasing the model for any use. Fully diacritized text
+# comes from Arabic Wikisource and the Tanzil Quran text instead.
+
+# Share of paragraphs held out for validation and test (per source unless overridden).
+split:
+  val_frac: 0.005
+  test_frac: 0.005
+
+sources:
+  # --- Wikipedia: modern standard text ------------------------------------
+  # Plain-text extracts published by Wikimedia on Hugging Face (one article per row).
+  # Only some files are used: ~35 MB of text is enough for 1M lines, and a few
+  # hundred MB per language gives plenty of variety.
+  - name: wikipedia_ar
+    kind: hf_parquet
+    repo: wikimedia/wikipedia
+    files: [20231101.ar/train-00001-of-00007.parquet, 20231101.ar/train-00002-of-00007.parquet]
+    license: CC BY-SA 4.0
+    language: ar
+
+  - name: wikipedia_fa
+    kind: hf_parquet
+    repo: wikimedia/wikipedia
+    files: [20231101.fa/train-00001-of-00004.parquet]
+    license: CC BY-SA 4.0
+    language: fa
+
+  - name: wikipedia_ur
+    kind: hf_parquet
+    repo: wikimedia/wikipedia
+    files: [20231101.ur/train-00000-of-00001.parquet]
+    license: CC BY-SA 4.0
+    language: ur
+
+  # --- Wikisource: classical texts, poetry, often fully diacritized -------
+  - name: wikisource_ar
+    kind: hf_parquet
+    repo: wikimedia/wikisource
+    files: [20231201.ar/train-00000-of-00003.parquet, 20231201.ar/train-00002-of-00003.parquet]
+    license: CC BY-SA 4.0
+    language: ar
+
+  # Only the diacritized part of Wikisource (~15% of its paragraphs). Wikisource as a
+  # whole has just 0.05 marks per letter, so mixed in with everything else the model
+  # would rarely see tashkeel. Built from wikisource_ar's prepared files (same splits).
+  - name: wikisource_ar_tashkeel
+    kind: filter
+    from: wikisource_ar
+    min_diacritics_per_letter: 0.3
+    license: CC BY-SA 4.0
+    language: ar
+
+  # --- Quran (Tanzil "simple" script): fully diacritized -------------------
+  # Terms: verbatim copies only, credit Tanzil Project with a link to tanzil.net.
+  # We only read it to render training images; the text itself is never shipped.
+  # Downloading requires --accept-tanzil-terms.
+  - name: tanzil_quran
+    kind: tanzil
+    url: https://tanzil.net/pub/download/index.php?quranType=simple&outType=txt-2&agree=true
+    license: CC BY 3.0 (Tanzil terms of use)
+    language: ar
+
+  # --- Project-authored sample sentences (no download) ---------------------
+  - name: sample
+    kind: local
+    path: training/samples/sample_text.txt
+    license: Apache-2.0
+    language: mixed
+    split: {val_frac: 0.15, test_frac: 0.15}  # tiny file: hold out more

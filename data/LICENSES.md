@@ -4,9 +4,28 @@ Every corpus, dataset, and font must have an entry here **before** it is used.
 Shipped models may only be trained on data whose license allows redistribution
 (see PRD §7.2 and §11). Research-only data is for private evaluation only.
 
-| Name | Type | Source URL | License | Allowed for shipped models? | Notes |
+## Text corpora
+
+Source names match `training/configs/corpora.yaml`.
+
+| Name | Type | Source | License | Allowed for shipped models? | Notes |
 |---|---|---|---|---|---|
-| Sample sentences | text | `training/samples/sample_text.txt` (written for this project) | Apache-2.0 | Yes | Rendering tests only |
+| `wikipedia_ar` | text | Arabic Wikipedia, plain-text extract [wikimedia/wikipedia](https://huggingface.co/datasets/wikimedia/wikipedia) `20231101.ar` | CC BY-SA 4.0 (also GFDL) | Yes, with attribution | Model release must credit Wikipedia contributors; ShareAlike may apply to the weights, so release them under CC BY-SA 4.0 if unsure (PRD §11) |
+| `wikipedia_fa` | text | Persian Wikipedia, same dataset, `20231101.fa` | CC BY-SA 4.0 | Yes, with attribution | as above |
+| `wikipedia_ur` | text | Urdu Wikipedia, same dataset, `20231101.ur` | CC BY-SA 4.0 | Yes, with attribution | as above |
+| `wikisource_ar` | text | Arabic Wikisource, plain-text extract [wikimedia/wikisource](https://huggingface.co/datasets/wikimedia/wikisource) `20231201.ar` | CC BY-SA 4.0 (texts mostly public domain) | Yes, with attribution | Main source of diacritized classical text |
+| `wikisource_ar_tashkeel` | text | Subset of `wikisource_ar`: paragraphs with ≥ 0.3 diacritics per letter | CC BY-SA 4.0 | Yes, with attribution | Same text as `wikisource_ar`, filtered so diacritized text can be weighted up |
+| `tanzil_quran` | text | Tanzil Quran text, "simple" script, [tanzil.net](https://tanzil.net/docs/text_license) | CC BY 3.0 + Tanzil terms (verbatim copies only; credit Tanzil Project with a link) | Yes, with attribution | Fully diacritized. Used only to render images; the text is never shipped or modified in distribution. Download requires `--accept-tanzil-terms` |
+| `sample` | text | `training/samples/sample_text.txt` (written for this project) | Apache-2.0 | Yes | Pipeline tests |
+
+### Considered and not used
+
+| Name | License | Why not |
+|---|---|---|
+| Tashkeela | GPLv2 ([SourceForge](https://sourceforge.net/projects/tashkeela/)) | Unclear whether a model trained on GPL text must be GPL; conflicts with an Apache-2.0 / CC BY-SA release |
+| OpenITI | CC BY-NC-SA 4.0 ([Zenodo](https://zenodo.org/records/17767721)) | Non-commercial: a model trained on it could not be offered for any use |
+
+These may be used for **private evaluation only** if ever downloaded.
 
 ## Fonts
 

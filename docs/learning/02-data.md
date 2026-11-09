@@ -2,7 +2,7 @@
 
 A recognizer learns from pairs of **(image, label)**: a picture of a text line and the exact text it shows. This note explains how we define the possible characters, how we make labels consistent, and (as M1 continues) how we generate millions of images.
 
-*Status: sections 1–7 are written.*
+*Status: complete for M1.*
 
 ---
 
@@ -70,6 +70,35 @@ A **corpus** is a big collection of text (e.g. all of Arabic Wikipedia). Raw cor
 - sometimes makes a very short fragment (1–5 characters).
 
 **Seeds.** The sampler uses its own random generator with a fixed **seed**. The same seed and the same input always give exactly the same lines, so a dataset can be regenerated and a training result reproduced.
+
+### Which corpora, and why licenses decide
+
+The text we train on shapes what the model is good at, and its license decides what we may do with the model.
+
+| Corpus | What it gives us | License |
+|---|---|---|
+| Arabic Wikipedia | modern standard Arabic, names, numbers | CC BY-SA 4.0 |
+| Persian and Urdu Wikipedia | the extra letters پ چ ژ گ ک ی ٹ ڈ ڑ ں ے … | CC BY-SA 4.0 |
+| Arabic Wikisource | classical prose and poetry, often with full tashkeel | CC BY-SA 4.0 |
+| Tanzil Quran text | fully diacritized text | CC BY 3.0 + Tanzil terms |
+
+Two well-known corpora were **left out**:
+- **Tashkeela** (GPLv2): it's unclear whether a model trained on GPL text must itself be GPL.
+- **OpenITI** (non-commercial): a model trained on it couldn't be offered for every use.
+
+Since arabic-ocr is open source and anyone may use it, we only train on text whose license clearly allows that. ML projects often get this wrong and discover too late that their model can't be released.
+
+**Attribution.** CC BY and CC BY-SA require credit. When we release a model, its notes must credit Wikipedia/Wikisource contributors and the Tanzil Project. "ShareAlike" may also mean the weights should be released under CC BY-SA 4.0; PRD §11 already allows that.
+
+**How much text?** 1M training lines of at most 60 characters is about 35 MB of text. We download a few hundred MB per language, which is plenty of variety, instead of the whole multi-GB dumps.
+
+**Preparing a corpus** (`uv run python -m training.corpora prepare`):
+1. clean every paragraph;
+2. drop exact duplicates (Wikipedia has many repeated boilerplate lines);
+3. assign each paragraph to train/val/test by hash (section 7);
+4. write one file per split.
+
+The generator then reads random lines from those files without loading them into memory. Each corpus has a **weight** that says how often it's picked. Weight isn't size: the Quran is small but gets 10% of lines, because fully diacritized text is rare and the model needs lots of tashkeel to learn it.
 
 ---
 

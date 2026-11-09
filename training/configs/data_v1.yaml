@@ -1,0 +1,45 @@
+# First full training set for the line recognizer (M1 exit: 1M+ line images).
+#
+#   uv run python -m training.corpora download --accept-tanzil-terms
+#   uv run python -m training.corpora prepare
+#   uv run python -m training.make_dataset training/configs/data_v1.yaml
+#
+# Roughly 10 minutes on a 16-thread PC and ~9 GB of disk.
+
+name: v1
+seed: 1234
+
+# Prepared corpora to draw text from (see training/configs/corpora.yaml).
+# Weights are how often each corpus is picked, not its size. Diacritized sources
+# (Wikisource, Quran) get more weight than their size so the model sees plenty of
+# tashkeel; Persian and Urdu get enough to learn their extra letters.
+text_sources:
+  # If a source isn't prepared (e.g. Tanzil not downloaded), it is skipped and the
+  # other weights are rescaled.
+  - {name: wikipedia_ar, weight: 0.40}
+  - {name: wikisource_ar, weight: 0.12}
+  - {name: wikisource_ar_tashkeel, weight: 0.15}
+  - {name: tanzil_quran, weight: 0.08}
+  - {name: wikipedia_fa, weight: 0.13}
+  - {name: wikipedia_ur, weight: 0.12}
+
+# How many line images to make for each split.
+samples:
+  train: 1000000
+  val: 10000
+  test: 10000
+
+shard_size: 5000
+
+# Text is rendered at a random font size, augmented, then resized so every image has
+# this height (width follows the aspect ratio). 64 px keeps diacritics clearly
+# visible; the model can shrink images further if it wants.
+image_height: 64
+font_size_px: [24, 64]
+
+# Overrides for training/text.py SamplerConfig (any field not listed keeps its default).
+sampler: {}
+
+# Overrides for training/augment.py AugmentConfig. Set `enabled: false` for clean images.
+augment:
+  enabled: true
