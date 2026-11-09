@@ -58,4 +58,6 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Lets tests import the `training` package from the repo root.
+pythonpath = ["."]
 addopts = ["-ra", "--strict-markers"]

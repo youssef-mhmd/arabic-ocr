@@ -27,10 +27,10 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Goal:** generate millions of correctly shaped, labeled Arabic line images.
 
-- [ ] `charset.py`: full symbol set (Arabic letters, hamza forms, tashkeel U+064B–U+0652 + U+0670, tatweel, ٠–٩, ۰–۹, 0–9, Arabic punctuation, Persian/Urdu letters), with encode/decode
-- [ ] Unicode normalization rules (NFC, presentation forms → base letters, consistent hamza/alef handling); unit tests
+- [x] `charset.py`: full symbol set (Arabic letters, hamza forms, tashkeel U+064B–U+0652 + U+0670, tatweel, ٠–٩, ۰–۹, 0–9, Arabic punctuation, Persian/Urdu letters), with encode/decode
+- [x] Unicode normalization rules (NFC, presentation forms → base letters, consistent hamza/alef handling); unit tests
 - [ ] Download scripts for corpora: Arabic Wikipedia, Tashkeela, OpenITI subset, Persian/Urdu Wikipedia
-- [ ] Text cleaning + line sampler (lengths 1–60 chars; mix of with/without diacritics; numbers; punctuation)
+- [x] Text cleaning + line sampler (lengths 1–60 chars; mix of with/without diacritics; numbers; punctuation)
 - [ ] Font collection (50+ OFL/Apache Arabic fonts) with a `fonts.json` manifest recording each font's license
 - [ ] Renderer using uharfbuzz + freetype-py (correct joining, ligatures, mark positioning)
 - [ ] Augmentation pipeline: blur, noise, JPEG, skew/rotation, perspective, paper textures, shadows, low DPI, ink bleed, screenshot/UI backgrounds
