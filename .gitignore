@@ -1,0 +1,35 @@
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Data: corpora, fonts, generated datasets (only the license register is tracked)
+data/*
+!data/LICENSES.md
+
+# Training outputs
+checkpoints/
+runs/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.lmdb
+wandb/
+
+# Models: only released .onnx files in models/ are committed
+models/*
+!models/*.onnx
+!models/.gitkeep
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,61 @@
+[project]
+name = "arabic-ocr"
+version = "0.1.0"
+description = "Offline, cross-platform OCR engine for Arabic-script text."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.13"
+# Runtime dependencies: what end users need to run OCR. Never add torch here.
+dependencies = [
+    "numpy>=2.5.4",
+    # onnxruntime dropped macOS Intel (x86-64) wheels after 1.23.x, so Intel Macs
+    # get the last version that supports them; every other platform gets the latest.
+    "onnxruntime>=1.31.1 ; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "onnxruntime>=1.23.2,<1.24 ; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "opencv-python-headless>=5.0.0.93",
+    "pillow>=13.0.0",
+    "typer>=0.28.0",
+]
+
+[project.scripts]
+arabic-ocr = "arabic_ocr.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
+]
+gui = [
+    "pyside6>=6.12.0",
+]
+# Training only (GPU machines: Kaggle/Colab/Linux/Windows). torch has no macOS Intel
+# wheels for Python 3.13, so `uv sync --group train` does not work on Intel Macs.
+train = [
+    "freetype-py>=2.5.1",
+    "pyyaml>=6.0.3",
+    "torch>=2.15.0",
+    "uharfbuzz>=0.57.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.format]
+# Keep hand-aligned code examples in the learning notes readable.
+exclude = ["docs/**"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "RUF"]
+# RUF001-003 flag "ambiguous" Unicode characters. Arabic text is the whole point of
+# this project, so these warnings would fire on every Arabic string.
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers"]
