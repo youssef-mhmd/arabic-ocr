@@ -53,11 +53,11 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 - [x] Training script: config file, mixed precision, checkpointing, resume, fixed seeds, logs (TensorBoard or CSV)
 - [ ] Notebook/script that runs training on Kaggle/Colab
 - [x] CTC greedy decoder (beam search later)
-- [ ] Evaluation script: CER/WER, with and without diacritics, per font family
+- [x] Evaluation script: CER/WER, with and without diacritics, per font family
 - [ ] Label a real test set: 50+ real printed line images and 50+ screenshot lines *(parallel ok)*
-- [ ] ONNX export + check that ONNX output matches PyTorch output
-- [ ] CPU inference wrapper using ONNX Runtime in `src/arabic_ocr/recognize/`
-- [ ] `docs/learning/03-recognizer-and-ctc.md`
+- [x] ONNX export + check that ONNX output matches PyTorch output
+- [x] CPU inference wrapper using ONNX Runtime in `src/arabic_ocr/recognize/`
+- [x] `docs/learning/03-recognizer-and-ctc.md`
 
 **Exit criteria:** On the synthetic test set, CER ≤ 2% with diacritics ignored and ≤ 6% with diacritics counted. On the real printed lines, CER ≤ 3% with diacritics ignored. The ONNX model runs on CPU.
 

@@ -2,7 +2,7 @@
 
 This note explains the model that reads one line image and outputs its text: how it's built, how CTC lets it learn without knowing where each letter is, and what happens during training.
 
-*Status: written during M2. Results will be added after the first full training run.*
+*Status: written during M2; results of the first full run are in section 7.*
 
 **First test run** (300,000 images, 11 minutes on the RTX 5060 laptop): validation CER went 16.6% -> 8.6% -> 5.0% (4.3% with diacritics ignored), and 61% of lines were exactly right. Training speed was about 550 images/second.
 
@@ -77,3 +77,66 @@ Settings worth knowing:
 - loss going down and validation CER going down: learning;
 - training loss down but validation CER stuck or rising: overfitting (unlikely with 1M varied synthetic images);
 - loss stuck near 3.5: not learning; check the data and the learning rate.
+
+---
+
+## 5. Measuring it: the evaluation script
+
+`training/evaluate_recognizer.py` reads every line of the **test** split (10,000 lines whose sentences were never in training or validation) and reports:
+
+- **CER** (character error rate): edits needed to fix the output, divided by the number of characters. 2% = 2 mistakes per 100 characters.
+- **WER** (word error rate): the same, counting whole words. One wrong letter makes the whole word wrong, so WER is always much higher than CER.
+- Both **with** and **without diacritics** (tashkeel). Without diacritics is the main number for normal printed text, which mostly has none.
+- **Exact lines:** the share of lines with no mistake at all.
+- The same numbers **per font style** (sans, naskh, kufi, nastaliq…) and **per font family**, worst first. This shows *where* the model struggles: in the first test run, nastaliq and handwriting-like display fonts were by far the hardest, and sans and kufi the easiest.
+
+It also writes the 300 worst lines to a `.tsv` file (want / got / font), which opens in Excel or any text editor. Looking at real mistakes tells you more than any average.
+
+M2 targets on this test set: CER ≤ 2% without diacritics, ≤ 6% with them.
+
+---
+
+## 6. Shipping it: ONNX
+
+PyTorch is a training library: about 3 GB with GPU support. Users shouldn't need that just to *run* a model. **ONNX** is a standard file format that stores the model's calculation steps and its weights in one file. **ONNX Runtime** is a small engine (about 15 MB) that runs such files fast on any CPU and OS.
+
+`training/export_onnx.py` turns a checkpoint into `models/recognizer-v1.onnx` (about 17.5 MB) and then **checks the copy** before it can ship:
+1. the same test lines go through PyTorch and ONNX Runtime;
+2. the raw scores must match almost exactly (largest difference below 0.001; in practice about 0.00002, the size of float rounding);
+3. the decoded text must be identical on every line.
+
+The `.onnx` file also stores the **charset fingerprint**, a short code computed from the symbol list. A model's 122 outputs only mean something with the exact symbol list it was trained on, so the runtime refuses a model whose fingerprint doesn't match.
+
+**One trap we found: padding.** To run several lines at once, shorter lines are padded to the same width. During training the LSTM is told where each line really ends ("packing"), so padding never matters. An ONNX model can't do that: it reads the padding as part of the line, and the backward-reading half of the BiLSTM starts *in* the padding. With lines padded up to 32 px, 7 of 100 lines came out differently when read in a batch than when read alone. The fix (`arabic_ocr/recognize/recognizer.py`): pad only up to a multiple of 4 px (less than one slice), and batch only lines of exactly the same width. Now batched and one-at-a-time results are identical, and the ONNX model scores within about 0.1% CER of PyTorch.
+
+---
+
+## 7. Results: the first full run (`recognizer_v1`)
+
+**Training:** 8 passes over the 1,000,000 training lines (8 million images seen), 13 November 2026, about 2.6 hours on the RTX 5060 laptop (~550-1,000 images/second). Validation CER after each 250,000 images:
+
+| images seen | 250k | 500k | 750k | 1M | 1.5M | ... | 8M (end) |
+|---|---|---|---|---|---|---|---|
+| CER | 6.22% | 3.57% | 2.70% | 2.10% | 1.63% | ... | 0.57% |
+
+Fast progress at first, then slow, steady gains as the learning rate decays: the usual shape.
+
+**Test set** (10,000 lines never seen in training), `models/recognizer-v1.onnx` on the CPU:
+
+| | CER | WER | lines exactly right |
+|---|---|---|---|
+| with diacritics | **0.74%** (target ≤ 6%) | 2.66% | 92.3% |
+| without diacritics | **0.60%** (target ≤ 2%) | 2.36% | |
+
+PyTorch on the GPU scored the same to within 0.01% CER, so the ONNX export loses nothing. On the CPU (while the laptop was doing other work) it reads about 145 lines per second.
+
+**Per font style (CER):** kufi 0.30%, sans 0.40%, naskh 0.67%, ruqaa 1.04%, display 1.25%, sahel 1.34%, **nastaliq 7.9%**. Nastaliq is by far the hardest: its words slope downward and letters stack on top of each other, and it is only 2% of the training data. One nastaliq font, Gulzar, alone accounts for 40 of the 300 worst lines.
+
+**What the worst mistakes show** (`models/recognizer-v1.errors-test.tsv`):
+1. **Two digit sets that look the same.** Arabic-Indic `٧٢١٧` and Persian `۷۲۱۷` are different characters, but most of their digits are drawn identically, so the image alone can't say which was meant. Not a model fault; a later option to unify digits on output (or when scoring) will handle it.
+2. **Unreadable training images.** Several total failures are very thin fonts (ExtraLight/Thin) where the generator's noise and low contrast left the text barely visible, and a person couldn't read them either. Next dataset version: a minimum contrast for thin fonts.
+3. **Nastaliq**, as above: more nastaliq data would help.
+
+**Skipped steps:** 223 of about 70,000 steps (0.3%) were skipped for a non-finite gradient. They became more common late in training, when the loss is tiny; since each is simply skipped, they did no harm.
+
+These are scores on *synthetic* lines. The real test is the hand-labelled set of real printed lines and screenshots (still to do), where the target is CER ≤ 3% without diacritics.

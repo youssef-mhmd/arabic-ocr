@@ -46,6 +46,8 @@ data = [
 # `uv sync --group train` does not work on Intel Macs.
 train = [
     { include-group = "data" },
+    "onnx>=1.23.2",
+    "onnxscript>=0.7.2",
     "torch>=2.15.0",
 ]
 

@@ -259,3 +259,10 @@ def convert_digits(text: str, style: Literal["keep", "western", "arabic"]) -> st
 def symbols_in_order() -> Sequence[str]:
     """The full class list, including the blank at index 0 (handy for model export)."""
     return [BLANK, *SYMBOLS]
+
+
+def fingerprint() -> str:
+    """Short hash of the symbol list. A model must be trained and run with the same one."""
+    import hashlib
+
+    return hashlib.sha1("\n".join(SYMBOLS).encode("utf-8")).hexdigest()[:12]
