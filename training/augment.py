@@ -76,6 +76,22 @@ class AugmentConfig:
     # margins around the text, as a fraction of the image height
     max_extra_margin: float = 0.25
 
+    # --- added for v2 (all off by default, so v1 settings give v1 images) ---
+    #: share of lines cropped close to the ink, as real line crops often are
+    tight_crop_prob: float = 0.0
+    tight_max_margin: float = 0.2
+    #: share of lines with bits of the lines above/below poking in at the edges
+    fragment_prob: float = 0.0
+    #: print only: thresholded to two tones (black-and-white scans, photocopies)
+    binarize_prob: float = 0.0
+    #: print only: small holes in the strokes (worn type, faint print)
+    broken_prob: float = 0.0
+    #: print only: dust specks on the paper
+    speckle_prob: float = 0.0
+    #: stronger minimum contrast for very thin fonts (Thin/ExtraLight weights)
+    thin_min_contrast: int = 90
+    thin_max_degradations: int = 3
+
 
 # ---------------------------------------------------------------------------
 # Building blocks. Each takes and returns float32 arrays.
@@ -134,6 +150,77 @@ def add_margins(ink: np.ndarray, rng: np.random.Generator, max_frac: float) -> n
     h = ink.shape[0]
     top, bottom, left, right = (int(rng.uniform(0, max_frac) * h) for _ in range(4))
     return cv2.copyMakeBorder(ink, top, bottom, left, right, cv2.BORDER_CONSTANT, value=0)
+
+
+def crop_to_ink(ink: np.ndarray) -> np.ndarray:
+    """Cut away the empty rows above and below the text (tight line crop)."""
+    rows = np.where(ink.max(axis=1) > 32)[0]
+    if len(rows) == 0:
+        return ink
+    return ink[rows[0] : rows[-1] + 1]
+
+
+def add_fragments(ink: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+    """Bits of the neighbouring lines at the top and/or bottom edge.
+
+    Real crops of a line often catch the descenders of the line above or the dots
+    of the line below. We imitate them with a slice of this line's own ink, shifted
+    sideways, so the strokes look like real text but aren't readable words.
+    """
+    h, w = ink.shape
+    parts = [ink]
+    sides = ["top", "bottom"] if rng.random() < 0.3 else [rng.choice(["top", "bottom"])]
+    for side in sides:
+        frac = rng.uniform(0.08, 0.3)
+        n = max(1, int(frac * h))
+        piece = ink[h - n :] if side == "top" else ink[:n]  # line above shows its bottom
+        piece = np.roll(piece, int(rng.integers(0, w)), axis=1)
+        gap = np.zeros((int(rng.uniform(0.02, 0.12) * h), w), ink.dtype)
+        parts = [piece, gap, *parts] if side == "top" else [*parts, gap, piece]
+    return np.vstack(parts)
+
+
+def break_strokes(alpha: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+    """Small holes in the ink (worn type). Kept sparse so dots never vanish entirely."""
+    h, w = alpha.shape
+    holes = smooth_noise(h, w, rng, scale=rng.uniform(1.5, 3)) > rng.uniform(0.75, 0.9)
+    return np.where(holes, alpha * rng.uniform(0.0, 0.4), alpha)
+
+
+def speckle(img: np.ndarray, rng: np.random.Generator, color: float) -> np.ndarray:
+    """A few single-pixel dust specks, far fewer than the dots of the letters."""
+    h, w = img.shape
+    out = img.copy()
+    n = int(h * w * rng.uniform(0.0002, 0.001))
+    out[rng.integers(0, h, n), rng.integers(0, w, n)] = color
+    return out
+
+
+def binarize(img: np.ndarray, rng: np.random.Generator, bg: float, fg: float) -> np.ndarray:
+    """Two tones only, like a black-and-white scan: jagged edges, no gray.
+
+    The threshold sits closer to the paper than to the ink (65-85% of the way from
+    ink to paper), as on a scanner set to keep text: faded or slightly blurred dots
+    still count as ink. A threshold halfway between erased whole dots in testing,
+    which would make the image disagree with its label.
+
+    The paper brightness is measured locally (like an adaptive scanner), so a
+    shadow doesn't turn a whole region black. If thresholding would still lose (or
+    invent) most of the text, the image is returned unchanged.
+    """
+    text_dark = fg < bg
+    k = max(3, img.shape[0] // 2 * 2 + 1)  # about half the line height
+    kernel = np.ones((k, k), np.uint8)
+    # Local paper level: the brightest (or darkest, in dark mode) nearby pixel.
+    local = cv2.dilate(img, kernel) if text_dark else cv2.erode(img, kernel)
+    local = cv2.GaussianBlur(local, (0, 0), k / 3)
+    level = fg + (local - fg) * rng.uniform(0.65, 0.85)
+    is_text = img < level if text_dark else img > level
+    reference = img < (fg + local) / 2 if text_dark else img > (fg + local) / 2
+    n, n_ref = int(is_text.sum()), int(reference.sum())
+    if n_ref == 0 or n < 0.7 * n_ref or n > 3 * n_ref:
+        return img
+    return np.where(is_text, fg, bg).astype(np.float32)
 
 
 def smooth_noise(h: int, w: int, rng: np.random.Generator, scale: float) -> np.ndarray:
@@ -253,11 +340,25 @@ def _pick_colors(
     return float(rng.uniform(0, min(high, 90))) if high > 0 else 0.0
 
 
+def _chance(rng: np.random.Generator, p: float) -> bool:
+    """True with probability p. Uses no random number when p is 0, so adding a new,
+    disabled option never changes the images an existing config makes."""
+    return p > 0 and rng.random() < p
+
+
 def augment(
-    ink: np.ndarray, rng: np.random.Generator, cfg: AugmentConfig | None = None
+    ink: np.ndarray, rng: np.random.Generator, cfg: AugmentConfig | None = None, thin: bool = False
 ) -> np.ndarray:
-    """Turn an ink image into a realistic grayscale line image (uint8, white = 255)."""
+    """Turn an ink image into a realistic grayscale line image (uint8, white = 255).
+
+    `thin`: the font is a very thin weight; use a stronger minimum contrast and fewer
+    degradations, so the text stays readable (and matches its label).
+    """
     cfg = cfg or AugmentConfig()
+    min_contrast = max(cfg.min_contrast, cfg.thin_min_contrast) if thin else cfg.min_contrast
+    max_degradations = (
+        min(cfg.max_degradations, cfg.thin_max_degradations) if thin else cfg.max_degradations
+    )
     a = ink.astype(np.float32)
     screen = rng.random() < cfg.screen_prob
 
@@ -272,7 +373,14 @@ def augment(
         if rng.random() < cfg.perspective_prob:
             a = perspective(a, rng, rng.uniform(0, cfg.max_perspective))
     text_height = ink.shape[0]  # the rendered line before extra margins
-    a = add_margins(a, rng, cfg.max_extra_margin)
+    if _chance(rng, cfg.tight_crop_prob):
+        a = crop_to_ink(a)
+        text_height = a.shape[0]
+        a = add_margins(a, rng, cfg.tight_max_margin)
+    else:
+        a = add_margins(a, rng, cfg.max_extra_margin)
+    if _chance(rng, cfg.fragment_prob):
+        a = add_fragments(a, rng)
     h, w = a.shape
 
     # 2. Background and text color.
@@ -287,11 +395,15 @@ def augment(
         dark = False
         bg = paper_background(h, w, rng, cfg)
     bg_level = float(np.median(bg))
-    text = _pick_colors(bg_level, rng, cfg.min_contrast, dark)
+    text = _pick_colors(bg_level, rng, min_contrast, dark)
 
     # 3. Put the ink on the background. Ink opacity varies a little (faded print).
     alpha = (a / 255.0) * (rng.uniform(0.75, 1.0) if not screen else 1.0)
+    if not screen and _chance(rng, cfg.broken_prob):
+        alpha = break_strokes(alpha, rng)
     img = bg * (1 - alpha) + text * alpha
+    if not screen and _chance(rng, cfg.speckle_prob):
+        img = speckle(img, rng, text)
 
     if screen and rng.random() < cfg.ui_lines_prob:
         img = add_ui_lines(img, rng, color=text if rng.random() < 0.5 else bg_level * 0.6)
@@ -306,14 +418,17 @@ def augment(
             ("shadow", 0.0 if screen else cfg.shadow_prob),
             ("low_res", cfg.low_res_prob),
             ("blur", cfg.blur_prob),
+            ("binarize", 0.0 if screen else cfg.binarize_prob),
             ("motion", 0.0 if screen else cfg.motion_blur_prob),
             ("noise", cfg.noise_prob * (0.4 if screen else 1.0)),
             ("jpeg", cfg.jpeg_prob),
         ]
-        if rng.random() < p
+        # v1 effects always draw a random number (even at p = 0), as before; only
+        # the new "binarize" skips it when disabled. Keeps v1 images reproducible.
+        if (_chance(rng, p) if name == "binarize" else rng.random() < p)
     ]
-    if len(chosen) > cfg.max_degradations:
-        keep = set(rng.choice(chosen, size=cfg.max_degradations, replace=False).tolist())
+    if len(chosen) > max_degradations:
+        keep = set(rng.choice(chosen, size=max_degradations, replace=False).tolist())
         chosen = [c for c in chosen if c in keep]
 
     # Blur strength scales with text size: sigma 1.3 is mild on 60 px text but
@@ -326,6 +441,8 @@ def augment(
             img = low_resolution(img, rng, cfg.min_low_res_scale, text_height)
         elif step == "blur":
             img = gaussian_blur(img, rng.uniform(0.3, max(0.3, max_sigma)))
+        elif step == "binarize":
+            img = binarize(img, rng, bg_level, text)
         elif step == "motion":
             img = motion_blur(img, rng)
         elif step == "noise":

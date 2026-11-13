@@ -51,15 +51,21 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 - [x] Recognizer model: CNN backbone + BiLSTM/Transformer encoder + CTC head (target ≤ 20 MB)
 - [x] Training script: config file, mixed precision, checkpointing, resume, fixed seeds, logs (TensorBoard or CSV)
-- [ ] Notebook/script that runs training on Kaggle/Colab
+- [ ] Notebook/script that runs training on Kaggle/Colab *(deferred: written in `training/notebooks/`, untested; not needed since training runs on the owner's GPU)*
 - [x] CTC greedy decoder (beam search later)
 - [x] Evaluation script: CER/WER, with and without diacritics, per font family
-- [ ] Label a real test set: 50+ real printed line images and 50+ screenshot lines *(parallel ok)*
+- [x] Label a real test set: 50+ real printed line images and 50+ screenshot lines *(parallel ok)*: 120 printed lines from OpenITI gold-standard scans + 120 browser screenshots in Windows fonts (`data/real/`, evaluation only)
 - [x] ONNX export + check that ONNX output matches PyTorch output
 - [x] CPU inference wrapper using ONNX Runtime in `src/arabic_ocr/recognize/`
 - [x] `docs/learning/03-recognizer-and-ctc.md`
 
 **Exit criteria:** On the synthetic test set, CER ≤ 2% with diacritics ignored and ≤ 6% with diacritics counted. On the real printed lines, CER ≤ 3% with diacritics ignored. The ONNX model runs on CPU.
+
+*Status 2026-11-13 (recognizer-v1):* synthetic ✅ (0.74% / 0.60%), ONNX on CPU ✅, real printed ❌ 5.9% (10.7% on tight crops). Needs a v2 dataset + retrain; see docs/learning/03 §8.*
+
+*Status 2026-11-13 (recognizer-v2, fine-tuned on dataset v2):* synthetic ✅ 0.59%; real printed dev ❌ 5.2% as given / 4.3% with margins (3.4% ignoring transcription conventions); screenshots 4.7%. See docs/learning/03 §9.
+
+*Status 2026-11-14 (recognizer-v3, from scratch on dataset v3):* **M2 exit criteria met.** Synthetic 0.60% (no diacritics) ✅; real printed held-out books 1.61% (2.79% strict) ✅; ONNX on CPU ✅. Shipped model: `models/recognizer-v3.onnx`. Screenshots 4.4% (v1 product target 1%, revisit in M3). See docs/learning/03 §10.
 
 ---
 

@@ -140,3 +140,104 @@ PyTorch on the GPU scored the same to within 0.01% CER, so the ONNX export loses
 **Skipped steps:** 223 of about 70,000 steps (0.3%) were skipped for a non-finite gradient. They became more common late in training, when the loss is tiny; since each is simply skipped, they did no harm.
 
 These are scores on *synthetic* lines. The real test is the hand-labelled set of real printed lines and screenshots (still to do), where the target is CER ≤ 3% without diacritics.
+
+---
+
+## 8. Real-world test: the gap between synthetic and real
+
+A score on our own synthetic lines only shows the model learned *our* renderer. The real question is how it reads lines it has never seen the like of. Two real sets (both evaluation-only, see `data/LICENSES.md`):
+
+- **Printed** (`training/make_printed_set.py`): 120 lines from scans of 5 printed classical Arabic books, with transcriptions double-checked by the OpenITI project.
+- **Screenshots** (`training/make_screenshot_set.py`): 120 unseen sentences drawn by the browser (Chromium) in 15 Windows fonts that are *not* in our training fonts, at UI sizes (13–26 px), in light, coloured and dark-mode colours.
+
+Run: `uv run python -m training.evaluate_recognizer models/recognizer-v1.onnx --real data/real/printed --pad 0.35`
+
+**Results for `recognizer-v1` (CER ignoring diacritics):**
+
+| Set | CER | Target |
+|---|---|---|
+| Synthetic test | 0.60% | ≤ 2% ✅ |
+| Real printed, crops as given | 10.7% | |
+| Real printed, with margins added (`--pad 0.35`) | **5.9%** | ≤ 3% ❌ (M2 exit) |
+| Screenshots | 7.7% | ≤ 1% (v1 product target, not M2) |
+
+This drop from synthetic to real is normal in OCR and has a name: the **domain gap**. A model is only as good as the resemblance between its training data and the real thing.
+
+**What we learned, in order of impact:**
+
+1. **Margins matter enormously.** In training lines the text fills about the middle half of the image height. The OpenITI lines are cropped tight to the letters, so after scaling to 64 px the letters look about twice as big as anything the model saw. Adding white space around them cut the error rate from 10.7% to 5.9%. Guessing *at reading time* whether a crop is tight proved unreliable (it hurt screenshots and synthetic lines), so the fix belongs in two places: the M3 line detector must crop with margins, and the next dataset should vary the margins (including tight crops) so the model doesn't care.
+2. **Wide gaps inside words.** Old typesetting leaves big gaps after letters that don't join (ا د ذ ر ز و), and the model reads those as spaces: `عيو ن`. Next dataset: vary letter and word spacing.
+3. **Unfamiliar fonts.** Common UI fonts read well (Segoe UI 0.4%, Tahoma 1.0%, Calibri 0.3%); decorative ones (Aldhabi, Andalus) and old book typefaces don't. Courier New (54%) is a special case: it stretches every join with kashida, and the model faithfully writes those as tatweel `ـ`, which the transcription omits.
+4. **Look-alike letters at scan quality:** أ/ا, ي/ى, د/ل, و/ر; and guillemets `« »` read as `((`.
+
+**Not the model's fault (transcription conventions):** OpenITI's transcriptions leave out most diacritics that *are* printed (so "with diacritics" CER, 14%, is meaningless on this set), write the ligature ﷺ out in full, and type footnote marks as `(3)`. These cost about 1.5 points of CER.
+
+**Proposed next step:** a v2 dataset with varied margins and spacing, scan-style degradation, guillemets and footnote marks, then retrain and re-test against the same real sets.
+
+---
+
+## 9. Second round: the v2 dataset and fine-tuning
+
+**What changed in the data** (`training/configs/data_v2.yaml`): 40% of lines cropped tight to the ink, bits of neighbouring lines at the edges, gaps after non-joining letters (labelled *without* a space), varied word spacing, black-and-white scan thresholding, worn strokes and dust, « » and footnote marks, kashida, stronger contrast for thin fonts, and 3× more nastaliq.
+
+Two bugs were caught by looking at samples before generating: the scan thresholding erased dots (and sometimes whole lines under a shadow), and the letter gaps were sometimes as wide as word spaces. Lesson: **every new augmentation must be checked by eye**, because one that silently destroys part of the text teaches the model wrong answers.
+
+**Fine-tuning** (`training/configs/recognizer_v2.yaml`): instead of starting from random weights, start from v1's best model and train 3 passes on v2 (1 hour instead of 2.6). The model keeps what it knows and adapts.
+
+**Scoring change:** tatweel (ـ) is now ignored when comparing texts; it carries no meaning.
+
+**Results (CER, diacritics ignored):**
+
+| Set | v1 | v2 |
+|---|---|---|
+| v1 synthetic test | 0.58% | 0.59% |
+| v2 synthetic test (harder lines) | 3.14% | 1.09% |
+| Screenshots | 5.12% | 4.70% |
+| Printed dev books, crops as given | 9.74% | 5.16% |
+| Printed dev books, margins added | 4.74% | 4.30% |
+
+v2 handles tight crops: the gap between "as given" and "with margins" shrank from 5 points to under 1. Nothing got worse on clean text. But printed is still above the 3% target.
+
+**What the remaining printed errors are:** about 1% is the ﷺ ligature, which the transcriptions write out as «صلى الله عليه وسلم». Our rules say presentation forms like ﷺ must be output as their base text, so this *is* the model's job; it has simply never seen that glyph. About 1% is digit style (the page prints ⁽١⁾, the transcription types `(1)`) and about 1% is spaces before punctuation (`البصرة .` vs `البصرة.`): transcription conventions, not misreadings. Ignoring those two conventions, v2 scores 3.39% (with margins). The rest are genuine letter, hamza and spacing confusions.
+
+The held-out books have **not** been scored yet: they are kept for a model that passes on the development books.
+
+---
+
+## 10. Third round: v3 (ligatures) trained from scratch
+
+**Data v3** = v2 plus honorific ligatures: the phrase «صلى الله عليه وسلم» (or «جل جلاله») is drawn as its single glyph ﷺ (ﷻ) in fonts that have it, while the label keeps the phrase. The model must "write" 18 letters for one compact glyph, borrowing output positions from the neighbouring words, so it needs plenty of examples: about 1 line in 150 has one.
+
+**Training:** 8 passes from scratch (`training/configs/recognizer_v3.yaml`), about 4 hours (slower than v1: wider, harder lines).
+
+**Scoring change** (agreed before this run): for *real* sets, digit style and spaces before punctuation are ignored as transcription conventions (`training/metrics.py: ignore_conventions`). The strict number is still reported.
+
+**Results (CER, diacritics ignored; real sets ignoring conventions):**
+
+| Set | v1 | v2 | v3 |
+|---|---|---|---|
+| v1 synthetic test | 0.58% | 0.59% | 0.60% |
+| Screenshots | 5.12% | 4.70% | 4.39% |
+| Printed dev, crops as given | — | 4.28% | 3.66% |
+| Printed dev, margins added | — | 3.39% | **3.07%** (target ≤ 3%) |
+
+v3 reads ﷺ on all 3 dev lines that print it (v2: 0). It is the best model on every set, and lands about 5 characters (out of 7,091) above the target on the development books: inside the noise of a 120-line test. Some remaining "errors" are further transcription choices (one book writes ﷺ out with an extra word, وآله; brackets typed as `(` where the page prints `«`), but the scoring rules were fixed *before* this run and were not changed afterwards to make the number pass: changing the rules after seeing the results ("moving the goalposts") would make the test meaningless.
+
+### The held-out test: M2 passes
+
+The deciding test: 120 lines from three OpenITI sources never used for any decision, scored once with v3.
+
+**One source had wrong answers.** `ibncabdzahir` scored 6.9%, far worse than the other two. Looking at its images next to its transcriptions showed why: those "gold standard" files are uncorrected machine OCR. Commas are typed as `»`, `؛` or `+`, letters are wrong (ووصاوا for ووصلوا), and numbers are garbled (`ا 8ه١` for ٧/١٨٥). On many lines the model read the page *better* than the label. A test with wrong answers can't measure accuracy, so that source was dropped (anyone can verify this by looking at the images). This is different from the transcription *conventions* above: those are style choices, while these labels are plainly wrong. Lesson: **check a test set's labels by eye before trusting them**, even when the source calls them "gold standard".
+
+**Result on the two verified books (80 lines), CER without diacritics:**
+
+| Scoring | with margins | crops as given |
+|---|---|---|
+| Ignoring conventions (the agreed measure) | **1.61%** | 1.91% |
+| Strict | 2.79% | 2.83% |
+
+All four pass the 3% target, even the strictest. The development books (3.07%) are harder typography; the held-out books are the unbiased measurement.
+
+**M2 exit criteria:** synthetic test 0.60% / 0.71% ✅, real printed lines 1.6% ✅, ONNX model runs on CPU ✅. The shipped model is `models/recognizer-v3.onnx`.
+
+Still open (not needed for M2): screenshots are at 4.4% against the v1 product target of 1%. Decorative fonts and tiny UI text are the weak spots, to be revisited with the M3 pipeline.

@@ -70,6 +70,8 @@ torch = [{ index = "pytorch-cu132", marker = "sys_platform == 'win32' or sys_pla
 [tool.ruff]
 line-length = 100
 target-version = "py313"
+# Notebooks are mostly shell commands (`!uv run ...`) for Kaggle/Colab.
+extend-exclude = ["*.ipynb"]
 
 [tool.ruff.format]
 # Keep hand-aligned code examples in the learning notes readable.

@@ -22,11 +22,13 @@ the same command again.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import hashlib
 import json
 import math
 import os
 import random
+import re
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -43,7 +45,7 @@ from training.dataset import SPLITS, ShardWriter, charset_fingerprint
 from training.fonts import MANIFEST as FONTS_MANIFEST
 from training.fonts import FontPicker, load_fonts
 from training.render import MissingGlyphError, render_line
-from training.text import LineSampler, SamplerConfig
+from training.text import LineSampler, SamplerConfig, ligate
 
 ROOT = Path(__file__).resolve().parent.parent
 DATASETS_DIR = ROOT / "data" / "datasets"
@@ -67,14 +69,39 @@ def load_config(path: Path) -> dict:
         "sampler",
         "augment",
     }
+    optional = {"render", "style_weights"}  # added for v2
     if missing := required - cfg.keys():
         raise ValueError(f"config is missing: {', '.join(sorted(missing))}")
-    if unknown := cfg.keys() - required:
+    if unknown := cfg.keys() - required - optional:
         raise ValueError(f"config has unknown keys: {', '.join(sorted(unknown))}")
     # Fail early on typos in the nested settings (dataclasses reject unknown fields).
     SamplerConfig(**cfg["sampler"])
     AugmentConfig(**{k: v for k, v in cfg["augment"].items() if k != "enabled"})
+    if unknown := cfg.get("render", {}).keys() - RENDER_DEFAULTS.keys():
+        raise ValueError(f"unknown render settings: {', '.join(sorted(unknown))}")
     return cfg
+
+
+#: Spacing options for render_line (see training/render.py). Off by default.
+RENDER_DEFAULTS = {
+    "letter_gap_prob": 0.0,  # share of lines with gaps after non-joining letters
+    "max_letter_gap": 0.12,  # biggest gap, as a fraction of the font size (a word
+    # space is ~0.25; bigger letter gaps would be indistinguishable from spaces)
+    "space_scale_prob": 0.0,  # share of lines with narrower/wider word spaces
+    "space_scale": [0.6, 2.0],  # range of word-space width multipliers
+    "ligature_prob": 0.0,  # chance of drawing honorific phrases as one glyph (ﷺ)
+}
+
+#: Font files this thin are hard to read once degraded: augment gently.
+THIN_FONT = re.compile(r"Thin|ExtraLight|UltraLight|Hairline|Light", re.IGNORECASE)
+
+
+def weighted_fonts(style_weights: dict[str, float]) -> list:
+    """All fonts, with each style's sampling weight multiplied as configured."""
+    return [
+        dataclasses.replace(f, weight=f.weight * style_weights.get(f.style, 1.0))
+        for f in load_fonts()
+    ]
 
 
 def config_hash(cfg: dict) -> str:
@@ -175,7 +202,8 @@ def make_shard(
     texts = text_picker(cfg, split, corpora_dir)
     np_rng = np.random.default_rng(seed)
     sampler = LineSampler(SamplerConfig(**cfg["sampler"]), seed=seed)
-    picker = FontPicker(load_fonts(), rng)
+    picker = FontPicker(weighted_fonts(cfg.get("style_weights", {})), rng)
+    ropt = {**RENDER_DEFAULTS, **cfg.get("render", {})}
     aug_settings = {k: v for k, v in cfg["augment"].items() if k != "enabled"}
     aug_cfg = AugmentConfig(**aug_settings)
     aug_on = cfg["augment"].get("enabled", True)
@@ -196,11 +224,31 @@ def make_shard(
             if font is None:
                 continue
             size = rng.randint(lo, hi)
+            # Spacing options draw random numbers only when switched on (keeps v1 exact).
+            gap = 0.0
+            if ropt["letter_gap_prob"] and rng.random() < ropt["letter_gap_prob"]:
+                gap = rng.uniform(0.02, ropt["max_letter_gap"]) * size
+            space = 1.0
+            if ropt["space_scale_prob"] and rng.random() < ropt["space_scale_prob"]:
+                space = rng.uniform(*ropt["space_scale"])
+            # Draw honorific phrases as their ligature glyph (ﷺ); the label keeps the
+            # phrase. If this font has no such glyph, draw the plain text instead.
+            drawn = line
+            if ropt["ligature_prob"] and ligate(line) != line:
+                if rng.random() < ropt["ligature_prob"]:
+                    drawn = ligate(line)
             try:
-                ink = render_line(line, font.path, size_px=size)
+                ink = render_line(drawn, font.path, size_px=size, letter_gap=gap, space_scale=space)
             except MissingGlyphError:
-                continue
-            image = augment(ink, np_rng, aug_cfg) if aug_on else 255 - ink
+                if drawn == line:
+                    continue
+                try:
+                    drawn = line
+                    ink = render_line(line, font.path, size, letter_gap=gap, space_scale=space)
+                except MissingGlyphError:
+                    continue
+            thin = bool(THIN_FONT.search(font.path.name))
+            image = augment(ink, np_rng, aug_cfg, thin=thin) if aug_on else 255 - ink
             image = resize_to_height(image, cfg["image_height"])
             meta = {
                 "font": font.path.name,
@@ -208,6 +256,9 @@ def make_shard(
                 "style": font.style,
                 "role": font.role,
                 "size_px": size,
+                "letter_gap": round(gap, 1),
+                "space_scale": round(space, 2),
+                "ligature": drawn != line,
             }
             writer.write(f"{split}-{index:05d}-{writer.count:05d}", image, line, meta)
     return count

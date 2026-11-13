@@ -1,0 +1,65 @@
+# Second training set for the line recognizer: v1 plus what real scans taught us.
+#
+#   uv run python -m training.make_dataset training/configs/data_v2.yaml
+#
+# About 20 minutes on the owner's 16-thread laptop and ~11 GB of disk.
+#
+# Why v2 (docs/learning/03 section 8): on real scanned books the v1 model made ~6-11%
+# errors, against 0.6% on its own synthetic lines. Causes, and the setting that
+# targets each one:
+#   - real line crops are tight around the letters   -> augment.tight_crop_prob
+#   - crops catch bits of the lines above/below      -> augment.fragment_prob
+#   - old print leaves gaps after non-joining letters,
+#     read as spaces ("عيو ن")                       -> render.letter_gap_prob
+#   - uneven word spacing                            -> render.space_scale_prob
+#   - black-and-white scans, worn type, dust         -> augment.binarize/broken/speckle
+#   - « » read as "((" ; footnote marks               -> sampler.quote/footnote_prob
+#   - stretched joins (kashida)                      -> sampler.kashida_prob
+#   - unreadable thin-font images in v1              -> augment.thin_*
+#   - nastaliq was only 2% of lines                  -> style_weights.nastaliq
+
+name: v2
+seed: 2345
+
+text_sources:
+  - {name: wikipedia_ar, weight: 0.40}
+  - {name: wikisource_ar, weight: 0.12}
+  - {name: wikisource_ar_tashkeel, weight: 0.15}
+  - {name: tanzil_quran, weight: 0.08}
+  - {name: wikipedia_fa, weight: 0.13}
+  - {name: wikipedia_ur, weight: 0.12}
+
+samples:
+  train: 1000000
+  val: 10000
+  test: 10000
+
+shard_size: 5000
+image_height: 64
+font_size_px: [24, 64]
+
+sampler:
+  quote_prob: 0.08
+  footnote_prob: 0.05
+  kashida_prob: 0.06
+
+render:
+  letter_gap_prob: 0.25
+  max_letter_gap: 0.12
+  space_scale_prob: 0.3
+  space_scale: [0.6, 2.0]
+
+# Multiply the sampling weight of a font style (fonts.yaml sets the base weights).
+style_weights:
+  nastaliq: 3.0
+
+augment:
+  enabled: true
+  tight_crop_prob: 0.4
+  tight_max_margin: 0.2
+  fragment_prob: 0.2
+  binarize_prob: 0.15
+  broken_prob: 0.08
+  speckle_prob: 0.15
+  thin_min_contrast: 150
+  thin_max_degradations: 1

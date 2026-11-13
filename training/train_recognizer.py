@@ -154,6 +154,17 @@ def main(argv: list[str] | None = None) -> int:
         opt.load_state_dict(ckpt["optimizer"])
         state = ckpt["state"]
         print(f"Resumed from {last}: epoch {state['epoch']}, {state['samples_seen']:,} images seen")
+    elif cfg.get("init_from"):
+        # Fine-tuning: start from another run's weights instead of random ones, with
+        # a fresh optimizer and learning-rate schedule. The model keeps what it
+        # learned and adapts to the new data (much faster than starting over).
+        src = ROOT / cfg["init_from"]
+        init = torch.load(src, map_location=device, weights_only=False)
+        if init["charset"] != charset_fingerprint():
+            print(f"{src} was trained with a different charset.")
+            return 1
+        model.load_state_dict(init["model"])
+        print(f"Starting {cfg['name']} from the weights of {src}")
     else:
         print(f"Starting {cfg['name']}: {count_parameters(model):,} weights")
 

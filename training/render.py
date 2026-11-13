@@ -29,6 +29,11 @@ import uharfbuzz as hb
 
 from arabic_ocr.bidi import ltr_mask
 
+#: Letters that never connect to the letter after them ("right-joining", plus the
+#: non-joining hamza). Old typesetting often leaves a visible gap after them, which
+#: must not be mistaken for a space between words.
+RIGHT_JOINING = frozenset("ءآأؤإاةدذرزوٱٲٳٵٶٷڈډڊڋڌڍڎڏڐڑڒړڔڕږڗژڙۀۃۄۅۆۇۈۉۊۋۍۏےۓەۮۯ")
+
 
 class MissingGlyphError(ValueError):
     """The font has no glyph for a character in the text."""
@@ -94,9 +99,10 @@ def load_font(path: str | Path, size_px: int) -> LoadedFont:
     )
 
 
-def _shape(font: LoadedFont, run: Run) -> list[tuple[int, float, float, float]]:
-    """Shape one run. Returns (glyph id, x offset, y offset, x advance) in pixels,
-    in visual left-to-right order."""
+def _shape(font: LoadedFont, run: Run) -> list[tuple[int, float, float, float, int]]:
+    """Shape one run. Returns (glyph id, x offset, y offset, x advance, cluster) in
+    pixels, in visual left-to-right order. `cluster` is the index in `run.text` of
+    the first character the glyph belongs to."""
     buf = hb.Buffer()
     buf.add_str(run.text)
     buf.direction = "rtl" if run.rtl else "ltr"
@@ -108,18 +114,30 @@ def _shape(font: LoadedFont, run: Run) -> list[tuple[int, float, float, float]]:
         if info.codepoint == 0:
             ch = run.text[info.cluster]
             raise MissingGlyphError(f"{font.path.name} has no glyph for {ch!r} (U+{ord(ch):04X})")
-        glyphs.append((info.codepoint, pos.x_offset / 64, pos.y_offset / 64, pos.x_advance / 64))
+        glyphs.append(
+            (info.codepoint, pos.x_offset / 64, pos.y_offset / 64, pos.x_advance / 64, info.cluster)
+        )
     return glyphs
 
 
 def render_line(
-    text: str, font_path: str | Path, size_px: int = 48, padding: int = 4
+    text: str,
+    font_path: str | Path,
+    size_px: int = 48,
+    padding: int = 4,
+    letter_gap: float = 0.0,
+    space_scale: float = 1.0,
 ) -> np.ndarray:
     """Render `text` with the given font. Returns a uint8 ink image (H, W).
 
     The image height covers the font's ascender-to-descender box plus any ink that
     sticks out of it (e.g. stacked diacritics), plus `padding` on every side.
     Raises MissingGlyphError if the font can't draw a character.
+
+    Spacing options (to look like other typesetting; the label is unchanged):
+    - `letter_gap`: extra pixels after every letter that doesn't join the next one
+      (RIGHT_JOINING), inside a word. Joins are never broken by this.
+    - `space_scale`: width of word spaces, as a multiple of the font's normal space.
     """
     if not text:
         raise ValueError("cannot render an empty line")
@@ -130,9 +148,23 @@ def render_line(
     placed = []  # (glyph id, x, y) with y pointing up from the baseline
     pen_x = 0.0
     for run in split_runs(text):
-        for gid, x_off, y_off, x_adv in _shape(font, run):
+        prev_cluster = None  # in visual order, i.e. the logically *next* character
+        for gid, x_off, y_off, x_adv, cluster in _shape(font, run):
+            ch = run.text[cluster]
+            if (
+                letter_gap
+                and run.rtl
+                and prev_cluster is not None
+                and cluster != prev_cluster
+                and ch in RIGHT_JOINING
+                and run.text[prev_cluster].isalpha()
+            ):
+                pen_x += letter_gap  # gap between this letter and the one after it
+            if ch == " ":
+                x_adv *= space_scale
             placed.append((gid, pen_x + x_off, y_off))
             pen_x += x_adv
+            prev_cluster = cluster
 
     # 2. Rasterize each glyph and remember its bitmap and top-left corner.
     bitmaps = []  # (array, left, top) in a y-down coordinate system, baseline at y = 0

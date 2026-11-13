@@ -51,7 +51,13 @@ def to_gray(image: np.ndarray) -> np.ndarray:
 
 
 def prepare_line(image: np.ndarray, height: int) -> np.ndarray:
-    """Grayscale and resize a line image to `height`, keeping its aspect ratio."""
+    """Grayscale and resize a line image to `height`, keeping its aspect ratio.
+
+    The model expects some white space around the text: in training lines the text
+    fills about the middle half of the height. Tightly cropped lines (cut close to
+    the letters) read much worse, so crops should include a margin of roughly a
+    third of the text height above and below (the M3 line detector will do this).
+    """
     gray = to_gray(image)
     h, w = gray.shape
     if h != height:

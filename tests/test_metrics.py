@@ -26,6 +26,21 @@ def test_missing_diacritic_counts_only_with_diacritics():
     assert s.wer == 1 and s.wer_no_diacritics == 0
 
 
+def test_tatweel_is_never_an_error():
+    s = score(["الخيل"], ["الخيـــل"])
+    assert s.cer == 0 and s.exact == 1
+    assert score(["فـإن"], ["فإن"]).cer == 0
+
+
+def test_ignore_conventions_unifies_digits_and_punctuation_spacing():
+    from training.metrics import ignore_conventions
+
+    assert ignore_conventions("العجوز(٣) البصرة .") == ignore_conventions("العجوز(3) البصرة.")
+    assert ignore_conventions("سنة ۱۹۸۸") == "سنة 1988"
+    assert ignore_conventions("« قال »") == "«قال»"
+    assert ignore_conventions("قال ثم") == "قال ثم"  # ordinary spaces are kept
+
+
 def test_rates_are_per_character_of_reference():
     s = score(["سلام", "عليكم"], ["سلم", "عليكم"])  # 1 error in 9 characters
     assert s.cer == pytest.approx(1 / 9)

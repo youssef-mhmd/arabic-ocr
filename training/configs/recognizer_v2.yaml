@@ -1,0 +1,38 @@
+# Second recognizer run (M2): fine-tune recognizer_v1 on the v2 dataset.
+#
+#   uv run --group train python -m training.train_recognizer training/configs/recognizer_v2.yaml
+#
+# Outputs go to runs/recognizer_v2/. Interrupt any time; run again to resume.
+#
+# Fine-tuning ("init_from"): instead of random weights, start from v1's best model.
+# It already reads clean text well; three passes over v2 teach it tight crops, wide
+# letter gaps, scan artefacts, « » and footnote marks. ~1 hour on the RTX 5060.
+# If this doesn't reach the real-print target, the fallback is training from
+# scratch on v2 (remove init_from, epochs: 8, ~2.6 hours).
+
+name: recognizer_v2
+seed: 1235
+dataset: data/datasets/v2
+init_from: runs/recognizer_v1/best.pt
+
+model:
+  rnn_hidden: 256
+  rnn_layers: 2
+  dropout: 0.2
+
+epochs: 3
+
+max_batch: 128
+width_budget: 65536
+
+optimizer:
+  lr: 0.0005           # half of v1's peak: adjust the weights, don't overwrite them
+  weight_decay: 0.01
+  warmup_samples: 50000
+  min_lr_fraction: 0.02
+  grad_clip: 5.0
+
+amp: bf16
+num_workers: 8
+log_every_steps: 100
+val_every_samples: 250000

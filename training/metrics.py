@@ -10,11 +10,14 @@ Both are reported twice (PRD §9, CLAUDE.md):
 - *without diacritics*: marks are removed from both texts first, so only the
   letters, digits and punctuation count.
 
-Texts are compared in logical order after normalization.
+Texts are compared in logical order after normalization. Tatweel (kashida, ـ) is
+removed from both texts first: it only stretches a letter join and carries no
+meaning, so writing it or not is never counted as a mistake.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -64,9 +67,30 @@ def _rates(refs: Sequence[str], hyps: Sequence[str]) -> tuple[float, float]:
     return char_err / max(char_total, 1), word_err / max(word_total, 1)
 
 
+_ALL_DIGITS_TO_WESTERN = str.maketrans(
+    "".join(charset.ARABIC_INDIC_DIGITS) + "".join(charset.EASTERN_ARABIC_INDIC_DIGITS),
+    "0123456789" * 2,
+)
+
+
+def ignore_conventions(text: str) -> str:
+    """Remove differences that are transcription *conventions*, not misreadings.
+
+    Used for real-world sets, whose transcriptions were typed by people following
+    their own rules (decided with the owner, 2026-11-13):
+    - digit style: the page prints ٣ but the transcriber typed 3 (the PRD makes
+      digit style an output option anyway);
+    - spaces before punctuation: the page prints `البصرة .` but the transcriber
+      typed `البصرة.` (and likewise after opening brackets).
+    """
+    text = text.translate(_ALL_DIGITS_TO_WESTERN)
+    text = re.sub(r"\s+([.،,:؛!؟?)\]»])", r"\1", text)
+    return re.sub(r"([(\[«])\s+", r"\1", text)
+
+
 def score(refs: Sequence[str], hyps: Sequence[str]) -> Scores:
-    refs = [charset.normalize(r) for r in refs]
-    hyps = [charset.normalize(h) for h in hyps]
+    refs = [charset.strip_tatweel(charset.normalize(r)) for r in refs]
+    hyps = [charset.strip_tatweel(charset.normalize(h)) for h in hyps]
     cer, wer = _rates(refs, hyps)
     strip = charset.strip_diacritics
     cer_nd, wer_nd = _rates([strip(r) for r in refs], [strip(h) for h in hyps])

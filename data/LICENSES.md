@@ -83,3 +83,11 @@ These may be used for **private evaluation only** if ever downloaded.
 | Vibes | [vibes](https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/vibes) | SIL Open Font License 1.1 | Yes (fonts are not shipped) |
 | Handjet | [handjet](https://github.com/google/fonts/tree/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/handjet) | SIL Open Font License 1.1 | Yes (fonts are not shipped) |
 <!-- fonts:end -->
+
+## Real-world evaluation sets (never used for training)
+
+| Name | Source | License | Allowed for shipped models? | Notes |
+|---|---|---|---|---|
+| `real/printed` | Sample of line images + double-checked transcriptions from [OpenITI/OCR_GS_Data](https://github.com/OpenITI/OCR_GS_Data) (`ara/book_*/7_final`), real scans of printed classical Arabic books | CC BY-NC-SA 4.0 | **No** (evaluation only) | Private M2 printed **development** set (5 books), built by `training/make_printed_set.py`. Not redistributed |
+| `real/printed_heldout` | Same repository, *other* sources: `ara/lq_Dhahabi.Tarikh/7_final` and `ara/lq_IbnJawzi.Muntazam/7_final` (`ara/ibncabdzahir` was tried and dropped: its transcriptions are uncorrected OCR) | CC BY-NC-SA 4.0 | **No** (evaluation only) | Held-out final check (`make_printed_set --set heldout`); scored only on finished models, never used for decisions |
+| `real/screenshots` | Unseen test-split sentences from our own dataset, drawn by Chromium with Windows system fonts and captured as screenshots (`training/make_screenshot_set.py`) | Same as the source corpora (CC BY-SA 4.0); fonts are Microsoft system fonts used only for on-screen rendering | No (evaluation only) | The font images must not be redistributed; kept local |

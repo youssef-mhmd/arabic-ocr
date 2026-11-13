@@ -19,10 +19,29 @@ from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
 
 from arabic_ocr import charset
+from training.render import RIGHT_JOINING
 
 _ARABIC_LETTERS = frozenset(
     charset.ARABIC_LETTERS + charset.ARABIC_EXTRA_LETTERS + charset.PERSIAN_URDU_LETTERS
 )
+#: Phrases that print as a single glyph in many books and fonts. Our charset rule
+#: maps these presentation forms back to their text (NFKC), so the *label* is always
+#: the phrase; only the rendered image uses the glyph.
+LIGATURES = {
+    "صلى الله عليه وسلم": "ﷺ",  # ﷺ
+    "جل جلاله": "ﷻ",  # ﷻ
+}
+
+
+def ligate(line: str) -> str:
+    """The text to *draw*: honorific phrases replaced by their ligature glyph."""
+    for phrase, glyph in LIGATURES.items():
+        line = line.replace(phrase, glyph)
+    return line
+
+
+#: Letters that connect to the letter after them; only these can be stretched.
+DUAL_JOINING = _ARABIC_LETTERS - RIGHT_JOINING
 _LETTERS_AND_DIGITS = _ARABIC_LETTERS | frozenset(
     charset.WESTERN_DIGITS + charset.ARABIC_INDIC_DIGITS + charset.EASTERN_ARABIC_INDIC_DIGITS
 )
@@ -101,6 +120,17 @@ class SamplerConfig:
     number_prob: float = 0.1
     #: chance of the line being a short "fragment" (1-5 chars), e.g. a page number or label
     short_prob: float = 0.05
+    # --- added for v2 (off by default) ---
+    #: chance of putting «guillemets» around a few words (common in printed books)
+    quote_prob: float = 0.0
+    #: chance of adding a footnote mark like (٣) after a word
+    footnote_prob: float = 0.0
+    #: chance of stretching some letter joins with tatweel (kashida), as justified
+    #: print does; the label contains the tatweel too
+    kashida_prob: float = 0.0
+    #: chance of adding an honorific phrase (e.g. صلى الله عليه وسلم) after a word;
+    #: the dataset builder may then draw it as one ligature glyph (ﷺ), see LIGATURES
+    honorific_prob: float = 0.0
 
 
 class LineSampler:
@@ -133,6 +163,23 @@ class LineSampler:
             return charset.convert_digits(num, "arabic").replace(".", "٫")
         eastern = str.maketrans("0123456789", "".join(charset.EASTERN_ARABIC_INDIC_DIGITS))
         return num.translate(eastern).replace(".", "٫")
+
+    def footnote_mark(self) -> str:
+        """A footnote reference like (٣) or (12), glued to the word before it."""
+        n = str(self.rng.randint(1, 20))
+        if self.rng.random() < 0.6:
+            n = charset.convert_digits(n, "arabic")
+        return f"({n})"
+
+    def stretch(self, line: str) -> str:
+        """Insert 1-3 tatweels after a few letters that join the next letter."""
+        out = []
+        for i, ch in enumerate(line):
+            out.append(ch)
+            nxt = line[i + 1] if i + 1 < len(line) else ""
+            if ch in DUAL_JOINING and nxt.isalpha() and self.rng.random() < 0.15:
+                out.append(charset.TATWEEL * self.rng.randint(1, 3))
+        return "".join(out)
 
     def _take_words(self, words: list[str], start: int, target: int) -> str:
         line = words[start]
@@ -188,6 +235,19 @@ class LineSampler:
 
         if rng.random() < cfg.number_prob:
             words.insert(rng.randint(0, len(words)), self.random_number())
+        # (each new option only draws random numbers when it is switched on, so old
+        # configs keep giving exactly the same lines)
+        if cfg.quote_prob and rng.random() < cfg.quote_prob:
+            i = rng.randrange(len(words))
+            j = min(len(words) - 1, i + rng.randint(0, 4))
+            words[i], words[j] = "«" + words[i], words[j] + "»"
+        if cfg.honorific_prob and rng.random() < cfg.honorific_prob:
+            phrase = rng.choice(list(LIGATURES))
+            words.insert(rng.randint(1, len(words)), phrase)
+        if cfg.footnote_prob and rng.random() < cfg.footnote_prob:
+            mark = self.footnote_mark()
+            i = rng.randrange(len(words))
+            words[i] = words[i] + mark
 
         line = self._take_words(words, self._start_for(words, target), target)
 
@@ -195,6 +255,8 @@ class LineSampler:
         # correct because we render exactly this cut string.
         if len(line) > cfg.max_len:
             line = line[: cfg.max_len].rstrip()
+        if cfg.kashida_prob and rng.random() < cfg.kashida_prob:
+            line = self.stretch(line)
         if not line or not (cfg.min_len <= len(line) <= cfg.max_len):
             return None
         # A line with no letters or digits (e.g. just "." or "«") is not worth
