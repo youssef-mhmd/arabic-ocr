@@ -110,13 +110,77 @@ def binarize(gray: np.ndarray) -> np.ndarray:
     return np.where(mask > 0, 0, 255).astype(np.uint8)
 
 
+#: Straight lines at least this long are rules or borders, not letters:
+#: vertical ones as a share of the page height, horizontal ones of the page width.
+RULE_V = 0.10
+RULE_H = 0.25
+#: ...and at least this many typical letter heights long.
+RULE_LETTERS = 4
+#: Only vertical rules are removed by default (see remove_rules).
+VERTICAL_ONLY = True
+
+
+def remove_rules(gray: np.ndarray) -> np.ndarray:
+    """Paint long straight lines (page frames, column rules, table borders,
+    separators) with the paper colour.
+
+    Text lines are cut out with a small margin, and a frame line next to the text
+    was read as an extra letter (a vertical rule looks like alef). A morphological
+    "opening" with a long, 1-pixel-wide kernel keeps only ink that forms a straight
+    run at least that long; no letter is anywhere near 10% of a page tall.
+
+    Measured (CER, no diacritics): real Urdu pages in a printed frame 41.4% ->
+    35.6%; Arabic printed pages, screenshots and synthetic pages unchanged. Removing
+    horizontal rules too cost 0.06-0.07 points on screenshots and synthetic pages
+    (and screenshot recall), so only vertical rules are removed (VERTICAL_ONLY).
+    """
+    h, w = gray.shape
+    # Ink = darker than its *surroundings* (adaptive threshold), so shadows and
+    # uneven lighting don't count; a global threshold marked shaded areas as ink
+    # and erased the text in them. Light-on-dark pages are inverted first.
+    g = 255 - gray if gray.mean() < 128 else gray
+    block = max(15, int(0.02 * max(h, w)) | 1)
+    mask = cv2.adaptiveThreshold(
+        g, 1, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, block, 15
+    )
+    # A rule is long AND thin. Coloured panels and header bars on screenshots are
+    # long too, but thick: remove the parts that are also this thick.
+    thick = max(6, int(0.004 * max(h, w)))
+    # ...and much taller than the letters: on a small image (one line of text) 10%
+    # of the height is less than a tall alef. Typical letter height = median height
+    # of the ink blobs.
+    _n, _labels, stats, _c = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    heights = stats[1:, cv2.CC_STAT_HEIGHT]
+    letter = float(np.median(heights[heights >= 3])) if (heights >= 3).any() else 10.0
+    vk = cv2.getStructuringElement(
+        cv2.MORPH_RECT, (1, max(25, int(h * RULE_V), int(RULE_LETTERS * letter)))
+    )
+    hk = cv2.getStructuringElement(cv2.MORPH_RECT, (max(25, int(w * RULE_H)), 1))
+    vert = cv2.morphologyEx(mask, cv2.MORPH_OPEN, vk)
+    vert &= ~cv2.dilate(cv2.morphologyEx(vert, cv2.MORPH_OPEN, np.ones((1, thick), np.uint8)),
+                        np.ones((3, 3), np.uint8))  # fmt: skip
+    horiz = cv2.morphologyEx(mask, cv2.MORPH_OPEN, hk)
+    horiz &= ~cv2.dilate(cv2.morphologyEx(horiz, cv2.MORPH_OPEN, np.ones((thick, 1), np.uint8)),
+                         np.ones((3, 3), np.uint8))  # fmt: skip
+    rules = vert if VERTICAL_ONLY else vert | horiz
+    if not rules.any():
+        return gray
+    rules = cv2.dilate(rules, np.ones((3, 3), np.uint8))  # the rule's soft edges too
+    paper = int(np.median(gray[mask == 0])) if (mask == 0).any() else 255
+    out = gray.copy()
+    out[rules > 0] = paper
+    return out
+
+
 def preprocess(
     image: np.ndarray,
     deskew: bool = True,
     denoise: bool = False,
     binarize_page: bool = False,
+    rules: bool = True,
 ) -> Preprocessed:
-    """Grayscale, then optionally deskew, denoise and binarize a page image."""
+    """Grayscale, then deskew, optionally denoise, remove rules/borders, and
+    optionally binarize a page image."""
     gray = to_gray(image)
     angle = 0.0
     matrix = np.float64([[1, 0, 0], [0, 1, 0]])
@@ -128,6 +192,8 @@ def preprocess(
             angle = 0.0
     if denoise:
         gray = cv2.medianBlur(gray, 3)
+    if rules:
+        gray = remove_rules(gray)
     if binarize_page:
         gray = binarize(gray)
     return Preprocessed(gray, angle, matrix)

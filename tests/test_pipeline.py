@@ -291,3 +291,19 @@ def test_word_list_fixes_unsure_dot_slips_only():
     assert lex.correct("بيث", 0.99) == "بيث"  # confident words are left alone
     assert lex.correct("كتب", 0.5) == "كتب"  # already a known word
     assert lex.correct("زيدون", 0.5) == "زيدون"  # unknown, no close known word: unchanged
+
+
+def test_remove_rules_keeps_letters_and_shadows():
+    from arabic_ocr.preprocess import remove_rules
+
+    page = np.full((600, 400), 230, np.uint8)
+    page[:, :200] -= 60  # a shadow over the left half
+    page[50:550, 30:33] = 20  # a vertical frame line (83% of the page height)
+    page[100:140, 200:204] = 20  # an alef-sized stroke
+    for i in range(40):  # ordinary letters (they set the typical letter height)
+        y, x = 160 + (i // 8) * 40, 220 + (i % 8) * 20
+        page[y : y + 15, x : x + 8] = 20
+    out = remove_rules(page)
+    assert out[300, 31] > 150  # frame painted with the paper colour
+    assert out[120, 202] == 20  # the letter stays
+    assert abs(int(out[400, 100]) - 170) <= 2  # the shadow is not "ink"
