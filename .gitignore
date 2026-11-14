@@ -33,3 +33,6 @@ models/*
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Optional word list, generated: uv run python -m training.make_lexicon
+models/lexicon.tsv.gz

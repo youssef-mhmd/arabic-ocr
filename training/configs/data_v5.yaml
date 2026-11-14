@@ -1,0 +1,68 @@
+# Fifth training set (M4): v4 plus wider gaps inside words, for screenshots.
+#
+#   uv run python -m training.make_dataset training/configs/data_v5.yaml
+#
+# Why (docs/learning/05 section 12): on real screenshots the most common error left
+# with recognizer-v4 was a space inserted inside a word after a letter that does
+# not join forward (ر ا د و ز): "شار ابوفا", "الشر عي", "د انوب". Times New Roman
+# and Courier New leave wider gaps there than any v4 training line (letter gaps
+# were capped at 0.12 of the font size). v5 allows up to 0.22, on 30% of lines,
+# and keeps real word spaces mostly wider (0.7-2.5x), so the model must use the
+# word itself to tell an in-word gap from a space.
+#
+# Used to fine-tune recognizer-v4 (recognizer_v5.yaml). ~6 minutes, ~4 GB.
+#
+name: v5
+seed: 5678
+
+text_sources:
+  - {name: wikipedia_ar, weight: 0.40}
+  - {name: wikisource_ar, weight: 0.12}
+  - {name: wikisource_ar_tashkeel, weight: 0.15}
+  - {name: tanzil_quran, weight: 0.08}
+  - {name: wikipedia_fa, weight: 0.13}
+  - {name: wikipedia_ur, weight: 0.12}
+
+samples:
+  train: 400000
+  val: 5000
+  test: 5000
+
+shard_size: 5000
+image_height: 64
+font_size_px: [24, 64]
+
+# New in v4 (training/make_dataset.py SMALL_TEXT_KEYS).
+small_text:
+  prob: 0.5
+  font_size_px: [9, 18]
+  hinting_prob: 0.5
+  styles: [sans, naskh, kufi, nastaliq]  # interface fonts; no display/ruqaa
+
+sampler:
+  quote_prob: 0.08
+  footnote_prob: 0.05
+  kashida_prob: 0.06
+  honorific_prob: 0.08
+
+render:
+  letter_gap_prob: 0.3
+  max_letter_gap: 0.22
+  space_scale_prob: 0.3
+  space_scale: [0.7, 2.5]
+  ligature_prob: 0.8
+
+# Multiply the sampling weight of a font style (fonts.yaml sets the base weights).
+style_weights:
+  nastaliq: 3.0
+
+augment:
+  enabled: true
+  tight_crop_prob: 0.4
+  tight_max_margin: 0.2
+  fragment_prob: 0.2
+  binarize_prob: 0.15
+  broken_prob: 0.08
+  speckle_prob: 0.15
+  thin_min_contrast: 150
+  thin_max_degradations: 1

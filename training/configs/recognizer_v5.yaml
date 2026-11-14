@@ -1,0 +1,39 @@
+# Fifth recognizer run (M4): fine-tune recognizer_v4 on dataset v5 (v4 + wider
+# in-word gaps, against spaces inserted inside words on screenshots).
+#
+#   uv run --group train python -m training.train_recognizer training/configs/recognizer_v5.yaml
+#
+# Outputs go to runs/recognizer_v5/. Interrupt any time; run again to resume.
+#
+# Why: on real screenshots v3 fails on text under ~16 px tall (docs/learning/05 §8).
+# Fine-tuning ("init_from") starts from v4's best model, which already reads print
+# and normal-size screen text well. Half of v4 is v3-style lines, so print is not
+# forgotten. 3 passes over 400k lines = 1.2M images, ~40-60 minutes on the RTX 5060.
+# Ship only if the real printed sets do not get worse.
+
+name: recognizer_v5
+seed: 1238
+dataset: data/datasets/v5
+init_from: runs/recognizer_v4/best.pt
+
+model:
+  rnn_hidden: 256
+  rnn_layers: 2
+  dropout: 0.2
+
+epochs: 3
+
+max_batch: 128
+width_budget: 65536
+
+optimizer:
+  lr: 0.0005           # half of v3's peak: adjust the weights, don't overwrite them
+  weight_decay: 0.01
+  warmup_samples: 50000
+  min_lr_fraction: 0.02
+  grad_clip: 5.0
+
+amp: bf16
+num_workers: 8
+log_every_steps: 100
+val_every_samples: 200000

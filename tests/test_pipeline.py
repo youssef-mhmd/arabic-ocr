@@ -279,3 +279,15 @@ def test_ragged_web_paragraph_stays_one_block():
     # right-aligned, unjustified lines ending at different places (as browsers wrap)
     boxes = [(x0, y, 560, y + 20) for x0, y in ((120, 0), (260, 30), (80, 60), (300, 90))]
     assert reading_order(boxes) == [[0, 1, 2, 3]]
+
+
+def test_word_list_fixes_unsure_dot_slips_only():
+    from arabic_ocr.correct import Lexicon
+
+    lex = Lexicon({"الكتاب": 5000, "كتب": 900, "بيت": 800})
+    assert lex.correct("الكتاث", 0.6) == "الكتاب"  # ث -> ب (same shape)
+    assert lex.correct("بيث", 0.6) == "بيت"  # ث -> ت (same shape, dots differ)
+    assert lex.correct("(بيث)،", 0.6) == "(بيت)،"  # punctuation kept
+    assert lex.correct("بيث", 0.99) == "بيث"  # confident words are left alone
+    assert lex.correct("كتب", 0.5) == "كتب"  # already a known word
+    assert lex.correct("زيدون", 0.5) == "زيدون"  # unknown, no close known word: unchanged

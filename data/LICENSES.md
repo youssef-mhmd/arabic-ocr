@@ -92,6 +92,7 @@ Synthetic images made by our own scripts from the corpora and fonts above only. 
 |---|---|---|---|
 | `datasets/v1`, `v2`, `v3`, `v4` | `training/make_dataset.py` (line images, M1–M3) | corpora + fonts above | Yes |
 | `datasets/pages_v1` | `training/make_pages.py` (whole pages, M3) | corpora + fonts above | Yes (has unlabelled lines; superseded by `pages_v2`) |
+| `models/lexicon.tsv.gz` (not committed) | `training/make_lexicon.py` (word counts, M4) | Wikipedia ar/fa/ur + Wikisource ar training text | Yes, with attribution (CC BY-SA 4.0); ship with credit to Wikipedia/Wikisource contributors |
 | `datasets/pages_v2`, `pages_v3` | `training/make_pages.py` (whole pages, M3; v3 adds interface pages) | corpora + fonts above | Yes |
 
 ## Real-world evaluation sets (never used for training)

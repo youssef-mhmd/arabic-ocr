@@ -114,6 +114,10 @@ def main(
     digits: Annotated[
         DigitStyle, typer.Option("--digits", help="Keep digits as printed, or convert them.")
     ] = DigitStyle.keep,
+    correct_words: Annotated[
+        bool,
+        typer.Option("--correct-words", help="Fix dot slips (ب/ت/ن...) with the word list."),
+    ] = False,
     no_deskew: Annotated[
         bool, typer.Option("--no-deskew", help="Do not straighten the page.")
     ] = False,
@@ -159,6 +163,7 @@ def main(
         "deskew": not no_deskew,
         "denoise": denoise,
         "binarize": binarize,
+        "correct_words": correct_words,
     }
     try:
         ocr = OCR()

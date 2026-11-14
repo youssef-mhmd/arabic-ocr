@@ -49,6 +49,7 @@ MODELS_DIR = Path(os.environ.get("ARABIC_OCR_MODELS", _REPO_MODELS))
 DETECTOR = "detector-v2.onnx"
 #: Convolutions in int8 (training/quantize.py): ~1.8x faster on CPU, same CER.
 RECOGNIZER = "recognizer-v4-int8.onnx"
+LEXICON = "lexicon.tsv.gz"  # optional word list (training/make_lexicon.py)
 
 #: Margin added around a detected line before reading it, as a fraction of the
 #: line's height: above/below, and at both ends. Detected boxes already hug the ink
@@ -297,6 +298,21 @@ class OCR:
                 )
         self.detector = LineDetector(det_path, threads)
         self.recognizer = LineRecognizer(rec_path, threads)
+        self._lexicon = None  # loaded on first use (correct_words=True)
+
+    @property
+    def lexicon(self):
+        """The word list for correct_words (models/lexicon.tsv.gz), or None."""
+        if self._lexicon is None:
+            path = MODELS_DIR / LEXICON
+            if not path.is_file():
+                raise FileNotFoundError(
+                    f"Word list not found: {path} (make it: uv run python -m training.make_lexicon)"
+                )
+            from arabic_ocr.correct import Lexicon
+
+            self._lexicon = Lexicon.load(path)
+        return self._lexicon
 
     def read(self, source: str | Path | np.ndarray, dpi: int = PDF_DPI, **kw) -> Document:
         """Read a file (image, multi-page TIFF or PDF) or an image array.
@@ -330,6 +346,7 @@ class OCR:
         denoise: bool = False,
         binarize: bool = False,
         drop_noise: bool = True,
+        correct_words: bool = False,
     ) -> Page:
         clock = _Clock()
         prep = preprocess(image, deskew=deskew, denoise=denoise, binarize_page=binarize)
@@ -365,6 +382,17 @@ class OCR:
             box = _apply(m_full, _rect_pts(0, cw, pad, ch - pad))
             lines.append(Line(text, dec.confidence, box, words))
 
+        if correct_words:  # dot confusions of unsure words, using the word list
+            for ln in lines:
+                if ln is None:
+                    continue
+                tokens = ln.text.split(" ")
+                for w in ln.words:
+                    fixed = self.lexicon.correct(w.text, w.confidence)
+                    if fixed != w.text and w.text in tokens:
+                        tokens[tokens.index(w.text)] = fixed
+                        w.text = fixed
+                ln.text = " ".join(tokens)
         if drop_noise:
             lines = [None if ln is not None and is_noise(ln) else ln for ln in lines]
         kept = [(i, ln) for i, ln in enumerate(lines) if ln is not None]

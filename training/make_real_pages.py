@@ -1,6 +1,7 @@
 """Build the *real page* test sets for end-to-end evaluation (M3).
 
     uv run python -m training.make_real_pages printed     # ~60 scanned book pages
+    uv run python -m training.make_real_pages printed --site fa -n 40   # Persian; also ur
     uv run python -m training.make_real_pages screens     # ~50 browser screenshots
 
 Both write `data/real/<set>/images/<id>.(jpg|png)` + `labels/<id>.json`, read by
@@ -45,6 +46,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
@@ -60,21 +62,40 @@ USER_AGENT = "arabic-ocr-testset-builder/0.1 (offline OCR research; evaluation o
 # printed: Arabic Wikisource
 # --------------------------------------------------------------------------
 
-API = "https://ar.wikisource.org/w/api.php"
-INDEX = "https://ar.wikisource.org/w/index.php"
-PROOFREAD_CATEGORY = "تصنيف:صححت"
-PAGE_NS = 104
+
+@dataclass(frozen=True)
+class Site:
+    """One Wikisource language edition."""
+
+    lang: str  # wiki language code, also used in local upload URLs
+    category: str  # the "proofread" quality category
+    ns: int  # the Page: namespace number
+    folder: str  # output folder under data/real
+    corpora: tuple[str, ...]  # our training corpora to check for overlap
+
+    @property
+    def host(self) -> str:
+        return f"https://{self.lang}.wikisource.org/w/"
+
+
+SITES = {
+    "ar": Site("ar", "صححت", 104, "pages_printed", ("wikisource_ar", "wikisource_ar_tashkeel")),
+    "fa": Site("fa", "نمونه‌خوانی‌شده", 104, "pages_printed_fa", ("wikipedia_fa",)),
+    "ur": Site("ur", "پروف خوانی شدہ", 250, "pages_printed_ur", ("wikipedia_ur",)),
+}
 THUMB_WIDTH = 1920  # largest standard Wikimedia thumbnail size that works for PDF pages
 #: Templates that only place or style text: replaced by their text.
 TEXT_TEMPLATES = {
     "وسط", "center", "c", "يمين", "يسار", "rh", "runningheader", "رأس", "رص",  # placement
     "ع", "ع2", "ع3", "ع4", "ع5", "ع6", "مض", "x-larger", "larger", "smaller",  # style
     "أبيات",  # verse; its two half-lines are separated by a double backslash
+    # Persian / Urdu Wikisource
+    "سرصفحه", "وسط‌چین", "زیرخط", "بزرگتر", "بزرگتر۱", "بزرگتر۲", "توخالی", "big",
 }  # fmt: skip
 #: Templates that only draw rules or spacing: dropped.
-BLANK_TEMPLATES = {"rule", "dhr", "ص", "سطر", "فراغات", "nop"}
+BLANK_TEMPLATES = {"rule", "dhr", "ص", "سطر", "فراغات", "nop", "خط‌کش", "خط کش"}
 #: Running headers keep their named values too, e.g. {{رص|وسط=( ٢٢٤ )}}.
-NAMED_TEXT_TEMPLATES = {"رص", "rh", "runningheader", "رأس"}
+NAMED_TEXT_TEMPLATES = {"رص", "rh", "runningheader", "رأس", "سرصفحه"}
 #: Footnotes, tables, pictures, formulas: the page is skipped (the scan's footnote
 #: area or picture would not match the text). {{حا}} is an inline footnote.
 SKIP_MARKERS = [
@@ -103,21 +124,21 @@ def _get(url: str, retries: int = 6) -> bytes:
     raise AssertionError("unreachable")
 
 
-def api(**params) -> dict:
+def api(site: Site, **params) -> dict:
     params.update(format="json", formatversion=2)
     time.sleep(1.0)  # be polite: Wikimedia rate-limits fast anonymous clients
-    return json.loads(_get(API + "?" + urllib.parse.urlencode(params)))
+    return json.loads(_get(site.host + "api.php?" + urllib.parse.urlencode(params)))
 
 
-def proofread_titles(cache: Path) -> list[str]:
+def proofread_titles(cache: Path, site: Site) -> list[str]:
     """All page titles in the "proofread" category (cached after the first run)."""
     if cache.exists():
         return json.loads(cache.read_text(encoding="utf-8"))
     titles, cont = [], {}
     while True:
         q = api(
-            action="query", list="categorymembers", cmtitle=PROOFREAD_CATEGORY,
-            cmnamespace=PAGE_NS, cmlimit=500, **cont,
+            site, action="query", list="categorymembers", cmtitle="Category:" + site.category,
+            cmnamespace=site.ns, cmlimit=500, **cont,
         )  # fmt: skip
         titles += [m["title"] for m in q["query"]["categorymembers"]]
         print(f"  {len(titles)} titles", flush=True)
@@ -166,6 +187,8 @@ def wikitext_to_text(wikitext: str) -> str | None:
         return None
     if "{{" in text or "}}" in text:
         return None
+    # Category links are page metadata, not printed text: drop them entirely.
+    text = re.sub(r"\[\[\s*(?:category|تصنيف|رده|زمرہ)\s*:[^\]]*\]\]", "", text, flags=re.I)
     text = re.sub(r"\[\[[^\]|]*\|([^\]]*)\]\]", r"\1", text)  # [[target|label]] -> label
     text = re.sub(r"\[\[([^\]]*)\]\]", r"\1", text)
     text = text.replace("'''", "").replace("''", "").replace("&nbsp;", " ")
@@ -184,11 +207,11 @@ def _arabic_share(text: str) -> float:
 
 
 class TrainingText:
-    """Checks whether a phrase occurs in our Wikisource training text."""
+    """Checks whether a phrase occurs in our training text."""
 
-    def __init__(self) -> None:
+    def __init__(self, corpora: tuple[str, ...] = ("wikisource_ar", "wikisource_ar_tashkeel")):
         self.blobs = []
-        for name in ("wikisource_ar", "wikisource_ar_tashkeel"):
+        for name in corpora:
             path = ROOT / "data" / "corpora" / name / "train.txt"
             if path.exists():
                 print(f"  loading {path.relative_to(ROOT)} for the overlap check", flush=True)
@@ -207,36 +230,41 @@ class TrainingText:
         return False
 
 
-def raw_wikitext(title: str) -> str:
+def raw_wikitext(title: str, site: Site = SITES["ar"]) -> str:
     """A page's wikitext via the plain "raw" address (cached by Wikimedia; the API
     rate-limits anonymous clients much more strictly)."""
     time.sleep(1.0)
-    url = INDEX + "?action=raw&title=" + urllib.parse.quote(title.replace(" ", "_"))
+    url = site.host + "index.php?action=raw&title=" + urllib.parse.quote(title.replace(" ", "_"))
     return _get(url).decode("utf-8")
 
 
-def scan_urls(page_title: str) -> list[str]:
-    """Candidate thumbnail URLs of the scan behind a 'صفحة:<file>/<n>' title.
+def scan_urls(page_title: str, site: Site = SITES["ar"]) -> list[str]:
+    """Candidate URLs of the scan behind a page title: 'صفحة:<file>/<n>' (a page of a
+    PDF/DjVu) or 'برگه:<image file>' (a single image, common on Persian Wikisource).
 
     Wikimedia stores a file under /<a>/<ab>/ where "ab" are the first two hex digits
     of the MD5 of its name, so the URL can be computed without an API call. Most
-    scans are on Commons; a few are uploaded to Wikisource itself.
+    scans are on Commons; some are uploaded to the Wikisource itself.
     """
     file_part, _, number = page_title.partition(":")[2].rpartition("/")
-    if not number.isdigit():
-        return []
+    # (isascii: Python counts Persian digits like ۲۷ as digits too)
+    if not (number.isascii() and number.isdigit()):  # a single image file: no page number
+        file_part, number = page_title.partition(":")[2], None
     name = file_part.replace(" ", "_")
     h = hashlib.md5(name.encode("utf-8")).hexdigest()
     q = urllib.parse.quote(name)
-    tail = f"{h[0]}/{h[:2]}/{q}/page{number}-{THUMB_WIDTH}px-{q}.jpg"
-    return [
-        f"https://upload.wikimedia.org/wikipedia/commons/thumb/{tail}",
-        f"https://upload.wikimedia.org/wikisource/ar/thumb/{tail}",
+    bases = [
+        "https://upload.wikimedia.org/wikipedia/commons",
+        f"https://upload.wikimedia.org/wikisource/{site.lang}",
     ]
+    if number is None:  # the original image (it may be smaller than a thumbnail)
+        return [f"{b}/{h[0]}/{h[:2]}/{q}" for b in bases]
+    tail = f"{h[0]}/{h[:2]}/{q}/page{number}-{THUMB_WIDTH}px-{q}.jpg"
+    return [f"{b}/thumb/{tail}" for b in bases]
 
 
-def download_scan(page_title: str) -> tuple[str, bytes] | None:
-    for url in scan_urls(page_title):
+def download_scan(page_title: str, site: Site = SITES["ar"]) -> tuple[str, bytes] | None:
+    for url in scan_urls(page_title, site):
         try:
             return url, _get(url)
         except urllib.error.HTTPError as e:
@@ -245,11 +273,11 @@ def download_scan(page_title: str) -> tuple[str, bytes] | None:
     return None
 
 
-def build_printed(n_pages: int, per_book: int, seed: int) -> None:
-    out = REAL_DIR / "pages_printed"
+def build_printed(n_pages: int, per_book: int, seed: int, site: Site = SITES["ar"]) -> None:
+    out = REAL_DIR / site.folder
     (out / "images").mkdir(parents=True, exist_ok=True)
     (out / "labels").mkdir(parents=True, exist_ok=True)
-    titles = proofread_titles(out / "candidates.json")
+    titles = proofread_titles(out / "candidates.json", site)
     books: dict[str, list[str]] = {}
     for t in titles:
         books.setdefault(t.rpartition("/")[0], []).append(t)
@@ -258,7 +286,7 @@ def build_printed(n_pages: int, per_book: int, seed: int) -> None:
     rng.shuffle(names)
     print(f"{len(titles)} proofread pages in {len(names)} books")
 
-    corpus = TrainingText()
+    corpus = TrainingText(site.corpora)
     done = len(list((out / "labels").glob("*.json")))
     skipped: dict[str, int] = {}
     for book in names:
@@ -274,7 +302,7 @@ def build_printed(n_pages: int, per_book: int, seed: int) -> None:
             if (out / "labels" / f"{key}.json").exists():
                 taken += 1
                 continue
-            wikitext = raw_wikitext(title)
+            wikitext = raw_wikitext(title, site)
             text = wikitext_to_text(wikitext)
             reason = None
             if text is None:
@@ -290,7 +318,7 @@ def build_printed(n_pages: int, per_book: int, seed: int) -> None:
             if reason:
                 skipped[reason] = skipped.get(reason, 0) + 1
                 continue
-            got = download_scan(title)
+            got = download_scan(title, site)
             if got is None:
                 skipped["no scan"] = skipped.get("no scan", 0) + 1
                 continue
@@ -303,7 +331,8 @@ def build_printed(n_pages: int, per_book: int, seed: int) -> None:
             label = {
                 "kind": "printed",
                 "source": title,
-                "url": "https://ar.wikisource.org/wiki/" + urllib.parse.quote(title),
+                "url": f"https://{site.lang}.wikisource.org/wiki/" + urllib.parse.quote(title),
+                "language": site.lang,
                 "image_url": url,
                 "license": "text CC BY-SA 4.0 (Wikisource); scan public domain (Commons)",
                 "width": int(img.shape[1]),
@@ -593,13 +622,13 @@ def build_screens(n_pages: int, seed: int, name: str, one_language: bool) -> Non
     print(f"Done -> {out}")
 
 
-def relabel_printed() -> None:
+def relabel_printed(site: Site = SITES["ar"]) -> None:
     """Fetch the wikitext of every page already in the printed set again and redo
     its text with the current conversion rules (same pages, same scans)."""
-    out = REAL_DIR / "pages_printed" / "labels"
+    out = REAL_DIR / site.folder / "labels"
     for path in sorted(out.glob("*.json")):
         label = json.loads(path.read_text(encoding="utf-8"))
-        text = wikitext_to_text(raw_wikitext(label["source"]))
+        text = wikitext_to_text(raw_wikitext(label["source"], site))
         if text is None:
             print(f"  {path.stem}: no longer passes the markup rules; left unchanged")
             continue
@@ -612,7 +641,8 @@ def relabel_printed() -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build the real page test sets.")
     sub = parser.add_subparsers(dest="set", required=True)
-    pr = sub.add_parser("printed", help="scanned book pages from Arabic Wikisource")
+    pr = sub.add_parser("printed", help="scanned book pages from Wikisource")
+    pr.add_argument("--site", choices=sorted(SITES), default="ar", help="Wikisource language")
     pr.add_argument("-n", type=int, default=60)
     pr.add_argument("--per-book", type=int, default=5)
     pr.add_argument("--seed", type=int, default=11)
@@ -623,12 +653,13 @@ def main(argv: list[str] | None = None) -> int:
     sc.add_argument(
         "--mixed", action="store_true", help="mix corpora word by word (how v1 was made)"
     )
-    sub.add_parser("relabel", help="re-make the printed set's text with the current rules")
+    rl = sub.add_parser("relabel", help="re-make a printed set's text with the current rules")
+    rl.add_argument("--site", choices=sorted(SITES), default="ar")
     args = parser.parse_args(argv)
     if args.set == "printed":
-        build_printed(args.n, args.per_book, args.seed)
+        build_printed(args.n, args.per_book, args.seed, SITES[args.site])
     elif args.set == "relabel":
-        relabel_printed()
+        relabel_printed(SITES[args.site])
     else:
         build_screens(args.n, args.seed, args.name, one_language=not args.mixed)
     return 0
