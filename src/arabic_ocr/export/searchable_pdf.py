@@ -1,0 +1,250 @@
+"""Searchable PDF: the original page images with an invisible text layer.
+
+    from arabic_ocr.export.searchable_pdf import SearchablePdf
+    pdf = SearchablePdf()
+    pdf.add_page(image, page, dpi=300)     # one call per page (image + its OCR result)
+    pdf.save("out.pdf")
+
+How it works (the method Tesseract and OCRmyPDF use):
+- Each page shows the original image, at its real size (pixels / dpi inches).
+- On top, every recognized word is written in text render mode 3 ("invisible"),
+  stretched to exactly cover the word in the image. Viewers do not draw it, but
+  they use it to select, search and copy text.
+- The font is a "glyphless" font made on the fly: its glyphs are empty, and each
+  character is stored by its Unicode number (CID = code point) with a ToUnicode
+  map back to Unicode. So any Arabic, Persian or Urdu letter works without
+  embedding a real Arabic font, and copied text comes out as Unicode.
+
+Arabic order: PDF text always advances left to right. Each word's characters are
+written in *display* order, left to right as they appear on the page: the logical
+text reversed, except that numbers keep their left-to-right digits (bidi.py).
+Viewers rebuild right-to-left text from those positions. Measured with pdfium (the
+engine of Chrome's PDF viewer) on a real page: logical order came back reversed and
+no search matched; display order came back with 1.5% differences and every search
+matched (tests/test_searchable_pdf.py).
+
+Memory: pages are added one at a time and stored compressed (JPEG or Flate), so
+long PDFs don't keep every full-size page image in memory.
+"""
+
+from __future__ import annotations
+
+import io
+import math
+import zlib
+from pathlib import Path
+
+import cv2
+import numpy as np
+import pikepdf
+from pikepdf import Array, Dictionary, Name, String
+
+from arabic_ocr.bidi import reading_order
+from arabic_ocr.pipeline import Page
+
+#: Glyph width in the glyphless font (1/1000 of the font size).
+GLYPH_WIDTH = 500
+
+
+def glyphless_font() -> bytes:
+    """A tiny TrueType font with two empty glyphs, each GLYPH_WIDTH wide."""
+    from fontTools.fontBuilder import FontBuilder
+    from fontTools.pens.ttGlyphPen import TTGlyphPen
+
+    fb = FontBuilder(1000, isTTF=True)
+    fb.setupGlyphOrder([".notdef", "glyph"])
+    fb.setupCharacterMap({})
+    empty = TTGlyphPen(None).glyph()
+    fb.setupGlyf({".notdef": empty, "glyph": empty})
+    fb.setupHorizontalMetrics({".notdef": (GLYPH_WIDTH, 0), "glyph": (GLYPH_WIDTH, 0)})
+    fb.setupHorizontalHeader(ascent=1000, descent=0)
+    fb.setupNameTable({"familyName": "GlyphLessFont", "styleName": "Regular"})
+    fb.setupOS2(sTypoAscender=1000, sTypoDescender=0, usWinAscent=1000, usWinDescent=0)
+    fb.setupPost()
+    buf = io.BytesIO()
+    fb.save(buf)
+    return buf.getvalue()
+
+
+TO_UNICODE = b"""/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<0000> <FFFF>
+endcodespacerange
+1 beginbfrange
+<0000> <FFFF> <0000>
+endbfrange
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+"""
+
+
+def _hex(text: str) -> str:
+    """Characters as 2-byte CIDs (= Unicode code points), hex-encoded."""
+    return "".join(f"{ord(c):04X}" for c in text if ord(c) <= 0xFFFF)
+
+
+class SearchablePdf:
+    def __init__(self) -> None:
+        self.pdf = pikepdf.new()
+        font_file = self.pdf.make_stream(glyphless_font())
+        descriptor = Dictionary(
+            Type=Name.FontDescriptor,
+            FontName=Name.GlyphLessFont,
+            Flags=5,
+            FontBBox=Array([0, 0, GLYPH_WIDTH, 1000]),
+            ItalicAngle=0,
+            Ascent=1000,
+            Descent=0,
+            CapHeight=1000,
+            StemV=80,
+            FontFile2=font_file,
+        )
+        cid_font = Dictionary(
+            Type=Name.Font,
+            Subtype=Name.CIDFontType2,
+            BaseFont=Name.GlyphLessFont,
+            CIDSystemInfo=Dictionary(
+                Registry=String("Adobe"), Ordering=String("Identity"), Supplement=0
+            ),
+            FontDescriptor=descriptor,
+            DW=GLYPH_WIDTH,
+            # every CID (Unicode code point) draws glyph 1, the empty one
+            CIDToGIDMap=self.pdf.make_stream(b"\x00\x01" * 65536),
+        )
+        self.font = self.pdf.make_indirect(
+            Dictionary(
+                Type=Name.Font,
+                Subtype=Name.Type0,
+                BaseFont=Name.GlyphLessFont,
+                Encoding=Name("/Identity-H"),
+                DescendantFonts=Array([cid_font]),
+                ToUnicode=self.pdf.make_stream(TO_UNICODE),
+            )
+        )
+
+    def _image(self, image: np.ndarray, jpeg_quality: int | None) -> pikepdf.Stream:
+        if image.ndim == 3 and image.shape[2] == 4:  # transparent -> on white
+            alpha = image[:, :, 3:4].astype(np.float32) / 255.0
+            image = (image[:, :, :3] * alpha + 255 * (1 - alpha)).astype(np.uint8)
+        gray = image.ndim == 2
+        h, w = image.shape[:2]
+        if jpeg_quality:
+            ok, data = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, jpeg_quality])
+            assert ok
+            raw, filt = data.tobytes(), Name.DCTDecode
+        else:
+            pixels = image if gray else cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            raw, filt = zlib.compress(np.ascontiguousarray(pixels).tobytes(), 6), Name.FlateDecode
+        stream = self.pdf.make_stream(raw)
+        stream.Type, stream.Subtype = Name.XObject, Name.Image
+        stream.Width, stream.Height, stream.BitsPerComponent = w, h, 8
+        stream.ColorSpace = Name.DeviceGray if gray else Name.DeviceRGB
+        stream.Filter = filt
+        return stream
+
+    def _text_layer(self, page: Page, scale: float, page_h: float) -> bytes:
+        """Invisible words: for each, font size = box height, stretched to box width."""
+        ops = ["BT", "3 Tr"]
+        for line in page.lines:
+            words = line.words or []
+            if not words:
+                continue
+            for word in words:
+                # A real space after every word (also the last one on a line): it
+                # separates words for copy and search, and pdfium silently drops a
+                # text piece of a single character (one-letter words like و).
+                text = word.text + " "
+                cids = _hex(reading_order(text)[::-1])  # display order, left to right
+                if not cids:
+                    continue
+                tl, tr, _br, bl = (np.asarray(p, np.float64) * scale for p in word.box)
+                # PDF y points up: flip, then measure the box
+                bl_x, bl_y = bl[0], page_h - bl[1]
+                dx, dy = tr[0] - tl[0], -(tr[1] - tl[1])
+                width = math.hypot(dx, dy)
+                height = math.hypot(bl[0] - tl[0], bl[1] - tl[1])
+                if width < 0.5 or height < 0.5:
+                    continue
+                cos, sin = dx / width, dy / width
+                n = len(cids) // 4
+                stretch = 100 * width / (n * GLYPH_WIDTH / 1000 * height)
+                ops.append(
+                    f"/F0 {height:.2f} Tf {stretch:.2f} Tz "
+                    f"{cos:.5f} {sin:.5f} {-sin:.5f} {cos:.5f} {bl_x:.2f} {bl_y:.2f} Tm "
+                    f"<{cids}> Tj"
+                )
+        ops.append("ET")
+        return "\n".join(ops).encode("ascii")
+
+    def add_page(
+        self, image: np.ndarray, page: Page, dpi: float = 300, jpeg_quality: int | None = 85
+    ) -> None:
+        """Add one page: `image` as read (same pixel size the OCR saw) and its result.
+
+        `jpeg_quality`: None stores the image losslessly (best for screenshots, but
+        large for scans)."""
+        h, w = image.shape[:2]
+        scale = 72.0 / dpi  # pixels -> points
+        page_w, page_h = w * scale, h * scale
+        content = f"q {page_w:.2f} 0 0 {page_h:.2f} 0 0 cm /Im0 Do Q\n".encode(
+            "ascii"
+        ) + self._text_layer(page, scale, page_h)
+        pdf_page = pikepdf.Page(
+            Dictionary(
+                Type=Name.Page,
+                MediaBox=Array([0, 0, page_w, page_h]),
+                Resources=Dictionary(
+                    XObject=Dictionary(Im0=self._image(image, jpeg_quality)),
+                    Font=Dictionary(F0=self.font),
+                ),
+                Contents=self.pdf.make_stream(content),
+            )
+        )
+        self.pdf.pages.append(pdf_page)
+
+    def save(self, path: str | Path) -> None:
+        self.pdf.save(str(path), compress_streams=True)
+
+
+#: Inputs stored losslessly in the PDF (screenshots, drawings); others as JPEG.
+LOSSLESS_SUFFIXES = {".png", ".bmp", ".webp"}
+
+
+def image_dpi(path: str | Path, default: float = 300) -> float:
+    """The resolution saved in an image file, or `default` if it has none."""
+    from PIL import Image
+
+    try:
+        with Image.open(path) as im:
+            dpi = im.info.get("dpi")
+    except OSError:
+        return default
+    if dpi and dpi[0] and float(dpi[0]) >= 50:  # ignore missing/bogus values like 1 or 72x
+        return float(dpi[0])
+    return default
+
+
+def ocr_to_pdf(ocr, source: str | Path, out: str | Path, dpi: int = 300, **options):
+    """OCR a file into a searchable PDF, one page at a time. Returns the Document."""
+    from arabic_ocr.inputs import PDF_SUFFIXES, load_pages
+    from arabic_ocr.pipeline import Document
+
+    source = Path(source)
+    suffix = source.suffix.lower()
+    page_dpi = dpi if suffix in PDF_SUFFIXES else image_dpi(source)
+    quality = None if suffix in LOSSLESS_SUFFIXES else 85
+    pdf = SearchablePdf()
+    pages = []
+    for image in load_pages(source, dpi):
+        page = ocr.read_image(image, **options)
+        pdf.add_page(image, page, dpi=page_dpi, jpeg_quality=quality)
+        pages.append(page)
+    pdf.save(out)
+    return Document(pages, source.name)

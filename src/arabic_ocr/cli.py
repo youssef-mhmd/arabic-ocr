@@ -5,6 +5,7 @@
     arabic-ocr page.png -f json -o out.json      # structured output with boxes
     arabic-ocr ./scans -f json -o results/       # batch: a folder ...
     arabic-ocr "scans/*.tif" -o results/         # ... or a glob pattern
+    arabic-ocr scan.pdf -f pdf -o out.pdf        # searchable PDF
     arabic-ocr page.png --no-diacritics --no-tatweel --digits western
 
 Inputs: PNG, JPEG, TIFF (all pages), BMP, WebP, PDF. With several input files,
@@ -29,6 +30,7 @@ app = typer.Typer(add_completion=False, help="Read Arabic-script text from image
 class Format(StrEnum):
     txt = "txt"
     json = "json"
+    pdf = "pdf"  # searchable PDF: the page images with an invisible text layer
 
 
 class DigitStyle(StrEnum):
@@ -133,8 +135,17 @@ def main(
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1) from e
 
+    if fmt is Format.pdf and output is None:
+        typer.echo("Error: a PDF can't be shown on screen; give a file: -o out.pdf", err=True)
+        raise typer.Exit(code=1)
+
     if not batch:
         try:
+            if fmt is Format.pdf:
+                from arabic_ocr.export.searchable_pdf import ocr_to_pdf
+
+                ocr_to_pdf(ocr, files[0], output, dpi=dpi, **options)
+                return
             result = render(ocr.read(files[0], dpi=dpi, **options), fmt)
         except ValueError as e:
             typer.echo(f"Error: {e}", err=True)
@@ -151,12 +162,17 @@ def main(
     for i, path in enumerate(files, 1):
         start = time.perf_counter()
         try:
-            doc = ocr.read(path, dpi=dpi, **options)
+            if fmt is Format.pdf:
+                from arabic_ocr.export.searchable_pdf import ocr_to_pdf
+
+                doc = ocr_to_pdf(ocr, path, output / names[path], dpi=dpi, **options)
+            else:
+                doc = ocr.read(path, dpi=dpi, **options)
+                (output / names[path]).write_text(render(doc, fmt) + "\n", encoding="utf-8")
         except Exception as e:  # keep going: one bad file must not stop a batch
             failed += 1
             typer.echo(f"[{i}/{len(files)}] {path}: FAILED ({e})", err=True)
             continue
-        (output / names[path]).write_text(render(doc, fmt) + "\n", encoding="utf-8")
         typer.echo(
             f"[{i}/{len(files)}] {path} -> {names[path]} "
             f"({len(doc.pages)} page(s), {time.perf_counter() - start:.1f} s)",

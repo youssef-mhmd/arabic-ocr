@@ -17,6 +17,8 @@ dependencies = [
     "pillow>=13.0.0",
     "typer>=0.28.0",
     "pypdfium2>=5.15.2",
+    "pikepdf>=10.18.1",
+    "fonttools>=4.68.0",
 ]
 
 [project.scripts]
