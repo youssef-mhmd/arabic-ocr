@@ -370,11 +370,15 @@ def build_printed(n_pages: int, per_book: int, seed: int, site: Site = SITES["ar
 # --------------------------------------------------------------------------
 
 EDGE = Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe")
-FONTS = [
+#: Fonts apps, web pages and documents use (the screenshot target is measured on these).
+UI_FONTS = [
     "Segoe UI", "Tahoma", "Arial", "Times New Roman", "Traditional Arabic",
     "Simplified Arabic", "Sakkal Majalla", "Microsoft Sans Serif", "Calibri",
-    "Courier New", "Urdu Typesetting", "Aldhabi", "Arabic Typesetting",
 ]  # fmt: skip
+#: Calligraphic, print-shop and monospace fonts, rare on screens: a stress test only.
+RARE_FONTS = ["Courier New", "Urdu Typesetting", "Aldhabi", "Arabic Typesetting"]
+FONTS = UI_FONTS + RARE_FONTS  # (v1 and v2 sets were made from all 13)
+FONT_SETS = {"all": FONTS, "ui": UI_FONTS, "rare": RARE_FONTS}
 # (text, muted text, background, panel, accent)
 THEMES = [
     ("#202124", "#5f6368", "#ffffff", "#f1f3f4", "#1a0dab"),
@@ -575,7 +579,9 @@ def _ink_box(gray: np.ndarray, box: list[float]) -> list[float] | None:
     return [x0 + cols[0], y0 + rows[0], x0 + cols[-1] + 1, y0 + rows[-1] + 1]
 
 
-def build_screens(n_pages: int, seed: int, name: str, one_language: bool) -> None:
+def build_screens(
+    n_pages: int, seed: int, name: str, one_language: bool, fonts: list[str] = FONTS
+) -> None:
     if not EDGE.exists():
         sys.exit(f"Microsoft Edge not found at {EDGE} (this set is built on Windows).")
     out = REAL_DIR / name
@@ -586,7 +592,7 @@ def build_screens(n_pages: int, seed: int, name: str, one_language: bool) -> Non
     with tempfile.TemporaryDirectory() as tmp:
         for i in range(n_pages):
             kind = KINDS[i % len(KINDS)]
-            font, size = rng.choice(FONTS), rng.choice([13, 14, 15, 16, 18, 20])
+            font, size = rng.choice(fonts), rng.choice([13, 14, 15, 16, 18, 20])
             theme = rng.choice(THEMES)
             w, h, dpr = rng.choice(VIEWPORTS)
             key = f"s{i:03d}"
@@ -666,6 +672,7 @@ def main(argv: list[str] | None = None) -> int:
     sc.add_argument("-n", type=int, default=50)
     sc.add_argument("--seed", type=int, default=12)
     sc.add_argument("--name", default="pages_screens_v2", help="output folder in data/real")
+    sc.add_argument("--fonts", choices=sorted(FONT_SETS), default="all")
     sc.add_argument(
         "--mixed", action="store_true", help="mix corpora word by word (how v1 was made)"
     )
@@ -677,7 +684,7 @@ def main(argv: list[str] | None = None) -> int:
     elif args.set == "relabel":
         relabel_printed(SITES[args.site])
     else:
-        build_screens(args.n, args.seed, args.name, one_language=not args.mixed)
+        build_screens(args.n, args.seed, args.name, not args.mixed, FONT_SETS[args.fonts])
     return 0
 
 

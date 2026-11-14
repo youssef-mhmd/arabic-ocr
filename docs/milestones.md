@@ -94,7 +94,7 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Goal:** all v1 inputs/outputs work, and v1 accuracy targets are met.
 
-- [ ] **Screenshot accuracy (carried over from M3):** real screenshot pages 3.26% → ≤ 1% CER (detection recall already 95%). Known causes: text under ~15 px tall, calligraphic/monospace Windows fonts (and detector-v2 splitting monospace lines at spaces). Test: `uv run python -m training.eval_pages --real data/real/pages_screens`
+- [x] **Screenshot accuracy (carried over from M3):** real screenshot pages (common UI/document fonts, 100 pages, `data/real/pages_screens_ui`) **0.91% CER, recall 98.2%** ✅ (detector-v2 + recognizer-v5). Rare fonts (Aldhabi, Typesetting, Courier New) stay a stress test (~10%); small text ≤ 14 px is the weakest part (2.7%). Test: `uv run python -m training.eval_pages --real data/real/pages_screens_ui`
 - [x] Layout analysis: blocks, multi-column detection (RTL column order), paragraphs, noise removal
 - [x] Input: PNG/JPEG/TIFF (multi-page)/BMP/WebP; PDF via pypdfium2 at 300 DPI; batch folders/globs
 - [x] Exporters: txt, JSON, **searchable PDF** (pikepdf invisible text layer), **hOCR**, **ALTO XML**
