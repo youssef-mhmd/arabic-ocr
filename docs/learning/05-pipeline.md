@@ -138,3 +138,35 @@ Lessons from building the sets:
 - **Check the references too.** The first printed score was 15.7%. The cause was my converter dropping every wiki list item from the reference text; the OCR output was fine.
 - **Measure the stages separately.** Scoring the recognizer on true boxes showed the screen problem is reading, not finding.
 - **Margins again:** on screenshots a bigger crop margin helps (lines are spaced widely), on books it hurts. Painting out neighbouring lines inside the margin did not help either way, so it was not kept.
+
+---
+
+## 9. Recognizer v4: small screen text
+
+Why v3 failed on small text: every training line was drawn with a 24–64 px font, and the "low resolution" effect never shrank text below 20 px. Real screens draw text *natively* at 10–15 px, and the font engine (often with **hinting**, which snaps strokes to the pixel grid) keeps dots legible. Shrinking a big rendering does not look the same, because it blurs the dots away.
+
+Dataset v4 (`training/configs/data_v4.yaml`): v3 settings, plus half of the lines drawn natively at 9–18 px in interface font styles (sans, naskh, kufi, nastaliq), half of those with hinting, always styled as screenshots. 410k lines, 5.5 minutes to make.
+
+Training (`recognizer_v4.yaml`): **fine-tuned** from v3 for 3 passes (1.2M images, ~1 hour on the RTX 5060), at half of v3's learning rate.
+
+Results (CER without diacritics):
+
+| Test | v3 | v4 |
+|---|---|---|
+| Synthetic print lines (v3 test) | 1.08% | 1.18% |
+| Synthetic small-text lines (v4 test) | 3.38% | 2.19% |
+| Real printed lines, dev / held-out | 4.77% / 2.83% | 5.03% / 3.00% |
+| Real screenshot lines (M2 set) | 4.39% | 3.11% |
+| **Real screenshot pages** | 4.56% | **3.56%** |
+| **Real printed pages** | 2.89% | **2.82%** |
+| Synthetic pages | 1.49% | 1.43% |
+
+On whole pages, the end-to-end measure, v4 is better on every set, so it is now the default (`models/recognizer-v4.onnx`). On isolated printed lines it is a little worse (+0.2 points), the usual cost of shifting a model towards new data, and something to watch.
+
+Screenshot pages by group (v4): common interface fonts 2.3%, rare/display fonts 10%, small text (≤ 14 px at 100% scaling) 10%. Text under 12 px tall went from 41% to 25% CER, 12–15 px from 13% to 6.6%.
+
+**Still open for the M3 screenshot targets (CER ≤ 1.5%, recall ≥ 95%):**
+- Tiny text and calligraphic Windows fonts (Aldhabi 20%, Urdu Typesetting 7%). We cannot train on Microsoft fonts (licence), only on open fonts that look similar.
+- Monospace fonts (Courier New): the model inserts spaces inside words.
+- Detection recall 81%: small menu items merged into one box, tiny lines missed. The detector has never been trained on small interface text.
+- Tatweel: on stretched fonts the model writes ـ (kashida) that is not in the text. The scores ignore it; users can remove it with `--no-tatweel` (PRD FR-9).

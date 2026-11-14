@@ -86,6 +86,8 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Exit criteria:** On the real test pages, end-to-end CER ≤ 3% for printed text and ≤ 1.5% for screenshots; detection recall ≥ 95%; an A4 page at 300 DPI takes ≤ 3 s on a 4-core CPU.
 
+**Status (2026-11-14):** printed pages 2.82% ✅, A4 page 2.44 s ✅; screenshots 3.56% ❌ (common UI fonts 2.3%), screenshot detection recall 81% ❌. See docs/learning/05 §8–9.
+
 ---
 
 ## M4: Layout, formats, library and API 🖥️

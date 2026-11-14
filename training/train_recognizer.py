@@ -109,6 +109,11 @@ def evaluate(model: nn.Module, loader: DataLoader, device: torch.device, amp) ->
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Validation prints Arabic examples. When output goes to a file, Windows Python
+    # defaults to a legacy codepage that can't encode them, and the run would crash.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description="Train the line recognizer.")
     parser.add_argument("config", type=Path)
     parser.add_argument("--max-samples", type=int, help="stop after this many images")

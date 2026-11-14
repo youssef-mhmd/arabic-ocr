@@ -143,6 +143,7 @@ def render_line(
     padding: int = 4,
     letter_gap: float = 0.0,
     space_scale: float = 1.0,
+    hinting: bool = False,
 ) -> np.ndarray:
     """Render `text` with the given font. Returns a uint8 ink image (H, W).
 
@@ -154,6 +155,10 @@ def render_line(
     - `letter_gap`: extra pixels after every letter that doesn't join the next one
       (RIGHT_JOINING), inside a word. Joins are never broken by this.
     - `space_scale`: width of word spaces, as a multiple of the font's normal space.
+
+    `hinting`: let FreeType snap the outlines to the pixel grid, as Windows does for
+    small interface text (crisper strokes, dots kept apart). Off by default: at
+    print sizes hinting barely matters, and earlier datasets were made without it.
     """
     if not text:
         raise ValueError("cannot render an empty line")
@@ -184,8 +189,9 @@ def render_line(
 
     # 2. Rasterize each glyph and remember its bitmap and top-left corner.
     bitmaps = []  # (array, left, top) in a y-down coordinate system, baseline at y = 0
+    flags = freetype.FT_LOAD_RENDER | (0 if hinting else freetype.FT_LOAD_NO_HINTING)
     for gid, x, y in placed:
-        face.load_glyph(gid, freetype.FT_LOAD_NO_HINTING | freetype.FT_LOAD_RENDER)
+        face.load_glyph(gid, flags)
         slot = face.glyph
         bmp = slot.bitmap
         if bmp.width == 0 or bmp.rows == 0:

@@ -354,7 +354,11 @@ def _chance(rng: np.random.Generator, p: float) -> bool:
 
 
 def augment(
-    ink: np.ndarray, rng: np.random.Generator, cfg: AugmentConfig | None = None, thin: bool = False
+    ink: np.ndarray,
+    rng: np.random.Generator,
+    cfg: AugmentConfig | None = None,
+    thin: bool = False,
+    force_screen: bool = False,
 ) -> np.ndarray:
     """Turn an ink image into a realistic grayscale line image (uint8, white = 255).
 
@@ -367,7 +371,9 @@ def augment(
         min(cfg.max_degradations, cfg.thin_max_degradations) if thin else cfg.max_degradations
     )
     a = ink.astype(np.float32)
-    screen = rng.random() < cfg.screen_prob
+    # `force_screen` (small native-size text, which only screens show) still draws
+    # the random number, so other images stay exactly as before.
+    screen = rng.random() < cfg.screen_prob or force_screen
 
     # 1. Shape of the ink (print only; screen text is crisp and straight).
     if not screen:

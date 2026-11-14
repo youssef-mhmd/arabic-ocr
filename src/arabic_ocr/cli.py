@@ -2,7 +2,7 @@
 
     arabic-ocr page.png                     # print the text
     arabic-ocr page.png -f json -o out.json # structured output with boxes
-    arabic-ocr page.png --no-diacritics --digits western
+    arabic-ocr page.png --no-diacritics --no-tatweel --digits western
 
 Images only for now (PNG, JPEG, TIFF, BMP, WebP); PDF support arrives in M4.
 """
@@ -49,6 +49,9 @@ def main(
     no_diacritics: Annotated[
         bool, typer.Option("--no-diacritics", help="Remove tashkeel from the output.")
     ] = False,
+    no_tatweel: Annotated[
+        bool, typer.Option("--no-tatweel", help="Remove tatweel/kashida (ـ) from the output.")
+    ] = False,
     digits: Annotated[
         DigitStyle, typer.Option("--digits", help="Keep digits as printed, or convert them.")
     ] = DigitStyle.keep,
@@ -76,6 +79,7 @@ def main(
         page = ocr.read_file(
             file,
             diacritics=not no_diacritics,
+            tatweel=not no_tatweel,
             digits=digits.value,
             deskew=not no_deskew,
             denoise=denoise,

@@ -1,0 +1,70 @@
+# Fourth training set (M3): v3 plus small interface text, for screenshots.
+#
+#   uv run python -m training.make_dataset training/configs/data_v4.yaml
+#
+# Why (docs/learning/05 section 8): on real screenshots recognizer-v3 reads common UI
+# fonts well, but text under ~16 px tall fails (13-41% CER). Every v3 line was drawn
+# at 24-64 px, and shrinking was capped at 20 px of text, so the model never saw
+# small text. Small text on screens is drawn *natively* at that size by the font
+# engine (often with hinting), which keeps dots legible; shrinking a big rendering
+# erases them. v4 draws half of its lines natively at 9-18 px (small_text), always
+# styled as screenshots. The other half are v3-style lines, so fine-tuning on v4
+# does not forget print.
+#
+# Used to fine-tune recognizer-v3 (recognizer_v4.yaml), so it is smaller than v3:
+# 400k training lines. About 10 minutes on the owner's 16-thread laptop, ~4 GB.
+#
+name: v4
+seed: 4567
+
+text_sources:
+  - {name: wikipedia_ar, weight: 0.40}
+  - {name: wikisource_ar, weight: 0.12}
+  - {name: wikisource_ar_tashkeel, weight: 0.15}
+  - {name: tanzil_quran, weight: 0.08}
+  - {name: wikipedia_fa, weight: 0.13}
+  - {name: wikipedia_ur, weight: 0.12}
+
+samples:
+  train: 400000
+  val: 5000
+  test: 5000
+
+shard_size: 5000
+image_height: 64
+font_size_px: [24, 64]
+
+# New in v4 (training/make_dataset.py SMALL_TEXT_KEYS).
+small_text:
+  prob: 0.5
+  font_size_px: [9, 18]
+  hinting_prob: 0.5
+  styles: [sans, naskh, kufi, nastaliq]  # interface fonts; no display/ruqaa
+
+sampler:
+  quote_prob: 0.08
+  footnote_prob: 0.05
+  kashida_prob: 0.06
+  honorific_prob: 0.08
+
+render:
+  letter_gap_prob: 0.25
+  max_letter_gap: 0.12
+  space_scale_prob: 0.3
+  space_scale: [0.6, 2.0]
+  ligature_prob: 0.8
+
+# Multiply the sampling weight of a font style (fonts.yaml sets the base weights).
+style_weights:
+  nastaliq: 3.0
+
+augment:
+  enabled: true
+  tight_crop_prob: 0.4
+  tight_max_margin: 0.2
+  fragment_prob: 0.2
+  binarize_prob: 0.15
+  broken_prob: 0.08
+  speckle_prob: 0.15
+  thin_min_contrast: 150
+  thin_max_degradations: 1

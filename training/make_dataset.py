@@ -69,7 +69,7 @@ def load_config(path: Path) -> dict:
         "sampler",
         "augment",
     }
-    optional = {"render", "style_weights"}  # added for v2
+    optional = {"render", "style_weights", "small_text"}  # added for v2 / v4
     if missing := required - cfg.keys():
         raise ValueError(f"config is missing: {', '.join(sorted(missing))}")
     if unknown := cfg.keys() - required - optional:
@@ -79,6 +79,8 @@ def load_config(path: Path) -> dict:
     AugmentConfig(**{k: v for k, v in cfg["augment"].items() if k != "enabled"})
     if unknown := cfg.get("render", {}).keys() - RENDER_DEFAULTS.keys():
         raise ValueError(f"unknown render settings: {', '.join(sorted(unknown))}")
+    if unknown := cfg.get("small_text", {}).keys() - SMALL_TEXT_KEYS:
+        raise ValueError(f"unknown small_text settings: {', '.join(sorted(unknown))}")
     return cfg
 
 
@@ -91,6 +93,13 @@ RENDER_DEFAULTS = {
     "space_scale": [0.6, 2.0],  # range of word-space width multipliers
     "ligature_prob": 0.0,  # chance of drawing honorific phrases as one glyph (ﷺ)
 }
+
+#: Small interface text (added for v4). With probability `prob` a line is drawn
+#: natively at a small size from `font_size_px` (like a browser or app draws it,
+#: not a big rendering shrunk afterwards, which erases dots), with FreeType hinting
+#: with probability `hinting_prob`, and always styled as a screenshot. Only fonts of
+#: the listed `styles` are drawn small (interfaces use body-text fonts, not display).
+SMALL_TEXT_KEYS = {"prob", "font_size_px", "hinting_prob", "styles"}
 
 #: Font files this thin are hard to read once degraded: augment gently.
 THIN_FONT = re.compile(r"Thin|ExtraLight|UltraLight|Hairline|Light", re.IGNORECASE)
@@ -208,6 +217,7 @@ def make_shard(
     aug_cfg = AugmentConfig(**aug_settings)
     aug_on = cfg["augment"].get("enabled", True)
     lo, hi = cfg["font_size_px"]
+    small_cfg = cfg.get("small_text")
 
     with ShardWriter(out) as writer:
         attempts = 0
@@ -224,6 +234,16 @@ def make_shard(
             if font is None:
                 continue
             size = rng.randint(lo, hi)
+            small, hinting = False, False
+            if small_cfg and rng.random() < small_cfg["prob"]:
+                # Very thin weights are unreadable at 9-12 px: keep them at normal sizes.
+                styles = small_cfg.get("styles")
+                small = not THIN_FONT.search(font.path.name) and (
+                    styles is None or font.style in styles
+                )
+            if small:
+                size = rng.randint(*small_cfg["font_size_px"])
+                hinting = rng.random() < small_cfg.get("hinting_prob", 0.5)
             # Spacing options draw random numbers only when switched on (keeps v1 exact).
             gap = 0.0
             if ropt["letter_gap_prob"] and rng.random() < ropt["letter_gap_prob"]:
@@ -238,17 +258,25 @@ def make_shard(
                 if rng.random() < ropt["ligature_prob"]:
                     drawn = ligate(line)
             try:
-                ink = render_line(drawn, font.path, size_px=size, letter_gap=gap, space_scale=space)
+                ink = render_line(
+                    drawn, font.path, size_px=size, letter_gap=gap, space_scale=space,
+                    hinting=hinting,
+                )  # fmt: skip
             except MissingGlyphError:
                 if drawn == line:
                     continue
                 try:
                     drawn = line
-                    ink = render_line(line, font.path, size, letter_gap=gap, space_scale=space)
+                    ink = render_line(
+                        line, font.path, size, letter_gap=gap, space_scale=space, hinting=hinting
+                    )
                 except MissingGlyphError:
                     continue
             thin = bool(THIN_FONT.search(font.path.name))
-            image = augment(ink, np_rng, aug_cfg, thin=thin) if aug_on else 255 - ink
+            if aug_on:
+                image = augment(ink, np_rng, aug_cfg, thin=thin, force_screen=small)
+            else:
+                image = 255 - ink
             image = resize_to_height(image, cfg["image_height"])
             meta = {
                 "font": font.path.name,
@@ -256,6 +284,8 @@ def make_shard(
                 "style": font.style,
                 "role": font.role,
                 "size_px": size,
+                "small": small,
+                "hinting": hinting,
                 "letter_gap": round(gap, 1),
                 "space_scale": round(space, 2),
                 "ligature": drawn != line,

@@ -225,3 +225,14 @@ def test_poetry_like_rows_are_not_columns_when_not_side_by_side():
     # Short lines alternating right and left (one per row): no column structure.
     boxes = [(300, 0, 560, 20), (40, 40, 280, 60), (300, 80, 560, 100)]
     assert _flat(reading_order(boxes)) == [0, 1, 2]
+
+
+def test_postprocess_options():
+    from arabic_ocr.pipeline import postprocess
+
+    text = "جـائزتـان ٢٠١٤ كَتَبَ"
+    assert postprocess(text) == text
+    assert postprocess(text, tatweel=False) == "جائزتان ٢٠١٤ كَتَبَ"
+    assert postprocess(text, diacritics=False, tatweel=False, digits="western") == (
+        "جائزتان 2014 كتب"
+    )

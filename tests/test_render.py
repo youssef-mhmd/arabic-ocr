@@ -164,3 +164,15 @@ def test_font_manifest_is_complete_and_licensed():
         assert fam["files"], fam["family"]
         assert all(len(f["sha256"]) == 64 for f in fam["files"])
         assert f"| {fam['family']} |" in licenses
+
+
+@needs_fonts
+def test_small_hinted_text_renders():
+    from training.render import render_line
+
+    plain = render_line("الكتاب المفيد", NASKH, size_px=11)
+    hinted = render_line("الكتاب المفيد", NASKH, size_px=11, hinting=True)
+    assert plain.max() > 0 and hinted.max() > 0
+    # Same layout (HarfBuzz positions), only the glyph rasterization differs.
+    assert abs(plain.shape[1] - hinted.shape[1]) <= 3
+    assert abs(plain.shape[0] - hinted.shape[0]) <= 3

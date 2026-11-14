@@ -45,7 +45,7 @@ from arabic_ocr.recognize.recognizer import LineRecognizer
 _REPO_MODELS = Path(__file__).resolve().parents[2] / "models"
 MODELS_DIR = Path(os.environ.get("ARABIC_OCR_MODELS", _REPO_MODELS))
 DETECTOR = "detector-v1.onnx"
-RECOGNIZER = "recognizer-v3.onnx"
+RECOGNIZER = "recognizer-v4.onnx"
 
 #: Margin added around a detected line before reading it, as a fraction of the
 #: line's height: above/below, and at both ends. Detected boxes already hug the ink
@@ -183,9 +183,13 @@ def split_words(
     return words
 
 
-def postprocess(text: str, diacritics: bool = True, digits: Digits = "keep") -> str:
+def postprocess(
+    text: str, diacritics: bool = True, digits: Digits = "keep", tatweel: bool = True
+) -> str:
     if not diacritics:
         text = charset.strip_diacritics(text)
+    if not tatweel:  # kashida (ـ): also what stretched fonts look like on screen
+        text = charset.strip_tatweel(text)
     return charset.convert_digits(text, digits)
 
 
@@ -214,6 +218,7 @@ class OCR:
         image: np.ndarray,
         diacritics: bool = True,
         digits: Digits = "keep",
+        tatweel: bool = True,
         deskew: bool = True,
         denoise: bool = False,
         binarize: bool = False,
@@ -232,7 +237,7 @@ class OCR:
 
         lines: list[Line | None] = []
         for (crop, m), dec in zip(crops, decoded, strict=True):
-            text = postprocess(dec.text, diacritics, digits)
+            text = postprocess(dec.text, diacritics, digits, tatweel)
             if not text.strip():
                 lines.append(None)
                 continue
@@ -241,7 +246,7 @@ class OCR:
             pad = PAD_Y * ch / (1 + 2 * PAD_Y)  # undo the vertical margin for output boxes
             words = [
                 Word(
-                    postprocess(t, diacritics, digits),
+                    postprocess(t, diacritics, digits, tatweel),
                     c,
                     _apply(m_full, _rect_pts(x0, x1, pad, ch - pad)),
                 )
