@@ -21,7 +21,8 @@ Commons. The scans are real: old paper, show-through, book edges, old typefaces.
   Transcriptions are proofread but not perfect, and sometimes follow their own
   conventions (e.g. typing ي where the print has ى); expect a little noise.
 
-**screens** (`data/real/pages_screens`): web-like pages (articles, sidebars, search
+**screens** (`data/real/pages_screens_v2`; v1 = `pages_screens`, made with --mixed
+--name pages_screens): web-like pages (articles, sidebars, search
 results, chat, settings, cards) drawn by Microsoft Edge with Windows system fonts
 at common screen scalings, captured as screenshots. The text comes from the
 corpora's *test* split. A script inside each page lets the browser report every
@@ -407,13 +408,28 @@ class Texts:
             {"name": "wikisource_ar", "weight": 0.15},
         ]
         self.picker = TextPicker(sources, "test", CORPORA_DIR)
+        self.names = [src["name"] for src in sources if (CORPORA_DIR / src["name"]).exists()]
         self.rng = rng
+        self.source = None  # one corpus for the whole page (set by new_page)
+
+    def new_page(self, one_language: bool) -> str:
+        """Start a page. With `one_language`, all its text comes from one corpus, as
+        on a real screen (v1 mixed corpora word by word, which put Arabic, Persian
+        and Urdu words side by side and made look-alike letters like ي/ی unguessable).
+        Returns the corpus name (or "mixed")."""
+        if not one_language:
+            self.source = None
+            return "mixed"
+        i = self.picker.files.index(self.picker.pick_source(self.rng))
+        self.source = self.picker.files[i]
+        return self.names[i] if i < len(self.names) else str(i)
 
     def words(self, lo: int, hi: int) -> str:
         n = self.rng.randint(lo, hi)
         out: list[str] = []
         while len(out) < n:
-            para = self.picker.pick_source(self.rng).random_line(self.rng)
+            src = self.source or self.picker.pick_source(self.rng)
+            para = src.random_line(self.rng)
             para = charset.normalize(charset.strip_diacritics(para))
             out += [w for w in para.split() if not charset.unsupported_chars(w)]
         return " ".join(out[:n])
@@ -514,10 +530,10 @@ def _ink_box(gray: np.ndarray, box: list[float]) -> list[float] | None:
     return [x0 + cols[0], y0 + rows[0], x0 + cols[-1] + 1, y0 + rows[-1] + 1]
 
 
-def build_screens(n_pages: int, seed: int) -> None:
+def build_screens(n_pages: int, seed: int, name: str, one_language: bool) -> None:
     if not EDGE.exists():
         sys.exit(f"Microsoft Edge not found at {EDGE} (this set is built on Windows).")
-    out = REAL_DIR / "pages_screens"
+    out = REAL_DIR / name
     (out / "images").mkdir(parents=True, exist_ok=True)
     (out / "labels").mkdir(parents=True, exist_ok=True)
     rng = random.Random(seed)
@@ -529,6 +545,7 @@ def build_screens(n_pages: int, seed: int) -> None:
             theme = rng.choice(THEMES)
             w, h, dpr = rng.choice(VIEWPORTS)
             key = f"s{i:03d}"
+            language = texts.new_page(one_language)
             page = Path(tmp) / f"{key}.html"
             page.write_text(_page_html(kind, texts, rng, font, size, theme, w, h), encoding="utf-8")
             png = out / "images" / f"{key}.png"
@@ -560,6 +577,7 @@ def build_screens(n_pages: int, seed: int) -> None:
             label = {
                 "kind": "screen",
                 "layout": kind,
+                "language": language,
                 "font": font,
                 "font_px": size,
                 "viewport": [w, h, dpr],
@@ -601,6 +619,10 @@ def main(argv: list[str] | None = None) -> int:
     sc = sub.add_parser("screens", help="browser screenshots of web-like pages")
     sc.add_argument("-n", type=int, default=50)
     sc.add_argument("--seed", type=int, default=12)
+    sc.add_argument("--name", default="pages_screens_v2", help="output folder in data/real")
+    sc.add_argument(
+        "--mixed", action="store_true", help="mix corpora word by word (how v1 was made)"
+    )
     sub.add_parser("relabel", help="re-make the printed set's text with the current rules")
     args = parser.parse_args(argv)
     if args.set == "printed":
@@ -608,7 +630,7 @@ def main(argv: list[str] | None = None) -> int:
     elif args.set == "relabel":
         relabel_printed()
     else:
-        build_screens(args.n, args.seed)
+        build_screens(args.n, args.seed, args.name, one_language=not args.mixed)
     return 0
 
 
