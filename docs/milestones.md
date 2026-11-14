@@ -73,16 +73,16 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Goal:** `arabic-ocr page.png` prints the page's text.
 
-- [ ] Synthetic full-page generator (multi-line, multi-column, mixed sizes, headers) with line boxes as labels
-- [ ] DBNet-style detector (small backbone, target ≤ 25 MB) + training + ONNX export
-- [ ] Detection evaluation: precision/recall at IoU ≥ 0.5
-- [ ] Preprocessing: grayscale, deskew, denoise, optional binarization
-- [ ] `pipeline.py`: preprocess → detect → crop/rectify lines → recognize → postprocess
-- [ ] Simple reading order (lines sorted top-to-bottom, right-to-left)
-- [ ] CLI (Typer): `arabic-ocr <file>`; `-f txt|json`; `-o`; `--no-diacritics`; `--digits keep|western|arabic`
-- [ ] JSON schema: page → blocks → lines → words, with box, text, confidence
+- [x] Synthetic full-page generator (multi-line, multi-column, mixed sizes, headers) with line boxes as labels
+- [x] DBNet-style detector (small backbone, target ≤ 25 MB) + training + ONNX export
+- [x] Detection evaluation: precision/recall at IoU ≥ 0.5
+- [x] Preprocessing: grayscale, deskew, denoise, optional binarization
+- [x] `pipeline.py`: preprocess → detect → crop/rectify lines → recognize → postprocess
+- [x] Simple reading order (lines sorted top-to-bottom, right-to-left)
+- [x] CLI (Typer): `arabic-ocr <file>`; `-f txt|json`; `-o`; `--no-diacritics`; `--digits keep|western|arabic`
+- [x] JSON schema: page → blocks → lines → words, with box, text, confidence
 - [ ] Label 50+ real printed pages + 50 screenshots for end-to-end testing *(parallel ok)*
-- [ ] Speed benchmark script
+- [x] Speed benchmark script
 
 **Exit criteria:** On the real test pages, end-to-end CER ≤ 3% for printed text and ≤ 1.5% for screenshots; detection recall ≥ 95%; an A4 page at 300 DPI takes ≤ 3 s on a 4-core CPU.
 

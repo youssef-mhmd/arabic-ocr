@@ -120,6 +120,22 @@ def _shape(font: LoadedFont, run: Run) -> list[tuple[int, float, float, float, i
     return glyphs
 
 
+def advance_width(
+    text: str, font_path: str | Path, size_px: int, space_scale: float = 1.0
+) -> float:
+    """Width in pixels the text will take (sum of glyph advances), without drawing.
+
+    Cheap enough to call for every word when breaking a paragraph into lines.
+    Raises MissingGlyphError like render_line.
+    """
+    font = load_font(str(font_path), size_px)
+    width = 0.0
+    for run in split_runs(text):
+        for _gid, _x, _y, x_adv, cluster in _shape(font, run):
+            width += x_adv * (space_scale if run.text[cluster] == " " else 1.0)
+    return width
+
+
 def render_line(
     text: str,
     font_path: str | Path,

@@ -196,7 +196,9 @@ def speckle(img: np.ndarray, rng: np.random.Generator, color: float) -> np.ndarr
     return out
 
 
-def binarize(img: np.ndarray, rng: np.random.Generator, bg: float, fg: float) -> np.ndarray:
+def binarize(
+    img: np.ndarray, rng: np.random.Generator, bg: float, fg: float, window: int | None = None
+) -> np.ndarray:
     """Two tones only, like a black-and-white scan: jagged edges, no gray.
 
     The threshold sits closer to the paper than to the ink (65-85% of the way from
@@ -207,9 +209,14 @@ def binarize(img: np.ndarray, rng: np.random.Generator, bg: float, fg: float) ->
     The paper brightness is measured locally (like an adaptive scanner), so a
     shadow doesn't turn a whole region black. If thresholding would still lose (or
     invent) most of the text, the image is returned unchanged.
+
+    `window`: size in pixels of the neighbourhood used for the paper level. The
+    default (the image height) suits single line images; whole pages must pass
+    about two line heights, or this is both slow and no longer local.
     """
     text_dark = fg < bg
-    k = max(3, img.shape[0] // 2 * 2 + 1)  # about half the line height
+    size = img.shape[0] if window is None else window
+    k = max(3, size // 2 * 2 + 1)  # about half the line height
     kernel = np.ones((k, k), np.uint8)
     # Local paper level: the brightest (or darkest, in dark mode) nearby pixel.
     local = cv2.dilate(img, kernel) if text_dark else cv2.erode(img, kernel)

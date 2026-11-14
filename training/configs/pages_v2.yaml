@@ -1,0 +1,35 @@
+# Second synthetic page dataset for the text-line detector (M3).
+#
+# Same settings as pages_v1, generated after two generator fixes: lines that ran past
+# the bottom of a column are no longer drawn without a label (pages_v1 had unlabelled
+# lines on ~80% of book pages), and page-level binarize is ~25x faster.
+#
+#   uv run python -m training.make_pages training/configs/pages_v2.yaml
+#
+# ~30,000 pages: book pages, two-column pages and screen-like pages, each with the
+# box and text of every line (training/page.py). About 7-10 minutes on the owner's
+# 16-thread laptop, ~4 GB of disk.
+
+name: pages_v2
+seed: 4567
+
+text_sources:
+  - {name: wikipedia_ar, weight: 0.45}
+  - {name: wikisource_ar, weight: 0.12}
+  - {name: wikisource_ar_tashkeel, weight: 0.10}
+  - {name: tanzil_quran, weight: 0.05}
+  - {name: wikipedia_fa, weight: 0.14}
+  - {name: wikipedia_ur, weight: 0.14}
+
+samples:
+  train: 30000
+  val: 500
+  test: 500
+
+shard_size: 500
+
+# Overrides for training/page.py PageConfig (any field not listed keeps its default).
+page: {}
+
+style_weights:
+  nastaliq: 2.0
