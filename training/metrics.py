@@ -21,6 +21,8 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+import numpy as np
+
 from arabic_ocr import charset
 
 
@@ -35,6 +37,29 @@ def edit_distance(a: Sequence, b: Sequence) -> int:
             cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (x != y)))
         prev = cur
     return prev[-1]
+
+
+def fast_edit_distance(a: str, b: str) -> int:
+    """Same result as edit_distance, for long strings (whole pages): NumPy, one row
+    of the table at a time.
+
+    Row update: substitutions/deletions come from the previous row (vectorised);
+    insertions chain along the row, cur[j] = min over k <= j of (tmp[k] + j - k),
+    which is a running minimum of (tmp[k] - k), plus j.
+    """
+    if len(a) < len(b):
+        a, b = b, a
+    if not b:
+        return len(a)
+    bb = np.frombuffer(b.encode("utf-32-le"), dtype=np.uint32)
+    j = np.arange(len(b) + 1)
+    prev = j.copy()
+    for i, ch in enumerate(a, 1):
+        tmp = np.empty_like(prev)
+        tmp[0] = i
+        tmp[1:] = np.minimum(prev[1:] + 1, prev[:-1] + (bb != ord(ch)))
+        prev = np.minimum.accumulate(tmp - j) + j
+    return int(prev[-1])
 
 
 @dataclass

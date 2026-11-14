@@ -42,7 +42,7 @@ MIN_GUTTER = 0.5
 MIN_BESIDE = 0.3
 
 
-def _rows(boxes: Sequence[Box], idx: list[int]) -> list[int]:
+def row_order(boxes: Sequence[Box], idx: list[int]) -> list[int]:
     """Top to bottom; lines that share a row (overlap vertically by more than half
     the smaller height) right to left."""
     idx = sorted(idx, key=lambda i: (boxes[i][1] + boxes[i][3]) / 2)
@@ -134,7 +134,7 @@ def _order(boxes: Sequence[Box], idx: list[int], h: float) -> list[list[int]]:
         return []
     x = find_gutter(boxes, idx, h)
     if x is None:
-        return _split_blocks(boxes, _rows(boxes, idx), h)
+        return _split_blocks(boxes, row_order(boxes, idx), h)
 
     spanning = sorted(
         (i for i in idx if boxes[i][0] < x < boxes[i][2]),

@@ -46,3 +46,16 @@ def test_rates_are_per_character_of_reference():
     assert s.cer == pytest.approx(1 / 9)
     assert s.wer == pytest.approx(1 / 2)
     assert s.exact == pytest.approx(0.5)
+
+
+def test_fast_edit_distance_matches_reference():
+    import random
+
+    from training.metrics import edit_distance, fast_edit_distance
+
+    rng = random.Random(0)
+    alphabet = "ابتث سم"
+    for _ in range(200):
+        a = "".join(rng.choice(alphabet) for _ in range(rng.randint(0, 30)))
+        b = "".join(rng.choice(alphabet) for _ in range(rng.randint(0, 30)))
+        assert fast_edit_distance(a, b) == edit_distance(a, b)

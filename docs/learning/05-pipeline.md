@@ -96,7 +96,7 @@ The M3 exit criteria are measured on **real** pages, which still need to be coll
 
 ---
 
-## 6. Speed
+## 7. Speed
 
 `training/benchmark_speed.py` times every step. Synthetic A4 pages at 300 DPI (2480×3500 px), 4 CPU threads, detector-v1 + recognizer-v3:
 
@@ -109,3 +109,32 @@ Almost all the time is the recognizer. Two ways to speed it up were measured:
 - **Parallel lines** (each model call on one thread, 4 lines read at once): ~20% faster with identical results. This is what the recognizer now does.
 
 The owner's laptop limited to 4 threads stands in for "a 4-core CPU". An older 4-core machine will be slower, so the benchmark should be repeated on one before release.
+
+---
+
+## 8. Real pages: the M3 exit test
+
+Two real test sets, built by `training/make_real_pages.py` and scored by `training/eval_pages.py --real <folder>`. Neither is ever used for training.
+
+**Printed** (`data/real/pages_printed`, 60 pages from 16 sources): proofread pages from Arabic Wikisource with their scans. Pages whose text appears in our training corpus are skipped. Pages are scored on the whole page text, so missed lines, invented lines and reading-order mistakes all count.
+
+**Screens** (`data/real/pages_screens`, 50 pages): web-like pages (articles, sidebars, search results, chat, settings, cards) drawn by Microsoft Edge with Windows fonts at common screen scalings. The browser reports every line's text and position, so these labels are exact.
+
+Results (detector-v1 + recognizer-v3, CER without diacritics):
+
+| Set | CER | M3 target |
+|---|---|---|
+| Printed, all 60 pages | 2.89% (2.74% ignoring conventions) | ≤ 3% ✅ |
+| · digital PDFs (48 pages, Moroccan laws) | ~1.7% | |
+| · scanned books (12 pages) | ~7.9% | |
+| Screens, 50 pages | 4.56% | ≤ 1.5% ❌ |
+| Screens, detection recall (IoU ≥ 0.5) | 81% | ≥ 95% ❌ |
+
+What the errors are:
+- **Screens: small text and unusual fonts.** With the *true* line boxes, the recognizer alone gets 4–5%, so the recognizer is the main cause. Common UI fonts are already fine (Segoe UI 0.6%, Microsoft Sans Serif 0.8%, Calibri 1.1%, Tahoma 1.2%). Display and print fonts at UI sizes are not (Aldhabi 25%, Arabic Typesetting 12%, Urdu Typesetting 9%), and neither is tiny text: lines under 12 px tall 41%, 12–15 px 13%, 22 px and up ~2%. Detection misses are mostly tiny lines and menu items merged into one box.
+- **Scanned books:** decorative borders read as garbage, verse separators, and transcription conventions (transcribers add hamzas that old prints leave out).
+
+Lessons from building the sets:
+- **Check the references too.** The first printed score was 15.7%. The cause was my converter dropping every wiki list item from the reference text; the OCR output was fine.
+- **Measure the stages separately.** Scoring the recognizer on true boxes showed the screen problem is reading, not finding.
+- **Margins again:** on screenshots a bigger crop margin helps (lines are spaced widely), on books it hurts. Painting out neighbouring lines inside the margin did not help either way, so it was not kept.

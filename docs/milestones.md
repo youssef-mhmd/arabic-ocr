@@ -81,7 +81,7 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 - [x] Simple reading order (lines sorted top-to-bottom, right-to-left)
 - [x] CLI (Typer): `arabic-ocr <file>`; `-f txt|json`; `-o`; `--no-diacritics`; `--digits keep|western|arabic`
 - [x] JSON schema: page → blocks → lines → words, with box, text, confidence
-- [ ] Label 50+ real printed pages + 50 screenshots for end-to-end testing *(parallel ok)*
+- [x] Label 50+ real printed pages + 50 screenshots for end-to-end testing *(built automatically: 60 Wikisource pages + 50 Edge screenshots, `training/make_real_pages.py`)*
 - [x] Speed benchmark script
 
 **Exit criteria:** On the real test pages, end-to-end CER ≤ 3% for printed text and ≤ 1.5% for screenshots; detection recall ≥ 95%; an A4 page at 300 DPI takes ≤ 3 s on a 4-core CPU.
