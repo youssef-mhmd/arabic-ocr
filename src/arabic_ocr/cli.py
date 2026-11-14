@@ -6,6 +6,7 @@
     arabic-ocr ./scans -f json -o results/       # batch: a folder ...
     arabic-ocr "scans/*.tif" -o results/         # ... or a glob pattern
     arabic-ocr scan.pdf -f pdf -o out.pdf        # searchable PDF
+    arabic-ocr scan.tif -f alto -o out.xml       # also: -f hocr
     arabic-ocr page.png --no-diacritics --no-tatweel --digits western
 
 Inputs: PNG, JPEG, TIFF (all pages), BMP, WebP, PDF. With several input files,
@@ -31,6 +32,12 @@ class Format(StrEnum):
     txt = "txt"
     json = "json"
     pdf = "pdf"  # searchable PDF: the page images with an invisible text layer
+    hocr = "hocr"  # hOCR 1.2 (HTML)
+    alto = "alto"  # ALTO 4 XML
+
+
+#: File extension for each format in batch mode.
+EXTENSIONS = {"txt": "txt", "json": "json", "pdf": "pdf", "hocr": "hocr", "alto": "xml"}
 
 
 class DigitStyle(StrEnum):
@@ -58,6 +65,14 @@ def render(doc, fmt: Format) -> str:
         from arabic_ocr.export.to_json import document_to_json
 
         return document_to_json(doc.pages, doc.source)
+    if fmt is Format.hocr:
+        from arabic_ocr.export.xml_formats import to_hocr
+
+        return to_hocr(doc)
+    if fmt is Format.alto:
+        from arabic_ocr.export.xml_formats import to_alto
+
+        return to_alto(doc)
     return doc.text
 
 
@@ -65,7 +80,10 @@ def output_names(files: list[Path], fmt: Format) -> dict[Path, str]:
     """<name>.<format> for every input; inputs that share a name (a.png, a.pdf)
     keep their extension too (a.png.txt, a.pdf.txt) so nothing is overwritten."""
     stems = [f.stem for f in files]
-    return {f: (f.name if stems.count(f.stem) > 1 else f.stem) + f".{fmt.value}" for f in files}
+    return {
+        f: (f.name if stems.count(f.stem) > 1 else f.stem) + f".{EXTENSIONS[fmt.value]}"
+        for f in files
+    }
 
 
 @app.command()

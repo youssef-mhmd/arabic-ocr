@@ -7,7 +7,6 @@ import numpy as np
 import pytest
 
 from arabic_ocr.detect.boxes import quad_to_rect
-from training.detector_data import MIN_LINE_HEIGHT, targets_for
 from training.render import advance_width
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -69,6 +68,10 @@ def test_pages_have_lines_inside_the_image(seed):
 
 
 def test_targets_mark_cores_and_ignore_tiny_lines():
+    # detector_data needs torch (train group); CI installs without it.
+    pytest.importorskip("torch")
+    from training.detector_data import MIN_LINE_HEIGHT, targets_for
+
     big = np.float32([[300, 100], [100, 100], [100, 140], [300, 140]])
     tiny = np.float32([[300, 200], [250, 200], [250, 203], [300, 203]])
     gt, mask = targets_for([big, tiny], 320, 400)

@@ -97,7 +97,7 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 - [ ] **Screenshot accuracy (carried over from M3):** real screenshot pages 3.26% → ≤ 1% CER (detection recall already 95%). Known causes: text under ~15 px tall, calligraphic/monospace Windows fonts (and detector-v2 splitting monospace lines at spaces). Test: `uv run python -m training.eval_pages --real data/real/pages_screens`
 - [ ] Layout analysis: blocks, multi-column detection (RTL column order), paragraphs, noise removal
 - [x] Input: PNG/JPEG/TIFF (multi-page)/BMP/WebP; PDF via pypdfium2 at 300 DPI; batch folders/globs
-- [ ] Exporters: txt, JSON, **searchable PDF** (pikepdf invisible text layer), **hOCR**, **ALTO XML**
+- [x] Exporters: txt, JSON, **searchable PDF** (pikepdf invisible text layer), **hOCR**, **ALTO XML**
 - [ ] Check the searchable PDF: text is selectable and searchable in common PDF viewers, Arabic copies correctly
 - [ ] Public library API: `OCR().read(path_or_image)` → typed result objects; docstrings
 - [ ] Local HTTP API: `arabic-ocr serve` (FastAPI, binds to 127.0.0.1 by default), `POST /ocr`
