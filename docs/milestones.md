@@ -86,7 +86,7 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Exit criteria:** On the real test pages, end-to-end CER ≤ 3% for printed text and ≤ 1.5% for screenshots; detection recall ≥ 95%; an A4 page at 300 DPI takes ≤ 3 s on a 4-core CPU.
 
-**Status (2026-11-14):** printed pages 2.82% ✅, A4 page 2.44 s ✅; screenshots 3.56% ❌ (common UI fonts 2.3%), screenshot detection recall 81% ❌. See docs/learning/05 §8–9.
+**Closed 2026-11-14 by the owner, with a known gap.** Printed pages 2.82% ✅, A4 page 2.44 s ✅. Screenshots 3.56% ❌ (common UI fonts 2.3%) and screenshot detection recall 81% ❌; this work moves to M4 (first item there). See docs/learning/05 §8–9.
 
 ---
 
@@ -94,6 +94,7 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Goal:** all v1 inputs/outputs work, and v1 accuracy targets are met.
 
+- [ ] **Screenshot accuracy (carried over from M3):** real screenshot pages 3.56% → ≤ 1% CER, detection recall 81% → ≥ 95%. Known causes: text under ~15 px tall, calligraphic/monospace Windows fonts, small menu items merged by the detector (never trained on small UI text). Test: `uv run python -m training.eval_pages --real data/real/pages_screens`
 - [ ] Layout analysis: blocks, multi-column detection (RTL column order), paragraphs, noise removal
 - [ ] Input: PNG/JPEG/TIFF (multi-page)/BMP/WebP; PDF via pypdfium2 at 300 DPI; batch folders/globs
 - [ ] Exporters: txt, JSON, **searchable PDF** (pikepdf invisible text layer), **hOCR**, **ALTO XML**
