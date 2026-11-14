@@ -36,6 +36,7 @@ from arabic_ocr import charset
 from arabic_ocr.bidi import logical_order
 from arabic_ocr.detect.boxes import RotRect, quad_to_rect
 from arabic_ocr.detect.detector import LineDetector
+from arabic_ocr.inputs import PDF_DPI, load_image, load_pages  # noqa: F401 (re-export)
 from arabic_ocr.layout import reading_order
 from arabic_ocr.preprocess import preprocess
 from arabic_ocr.recognize.ctc import Decoded
@@ -107,15 +108,26 @@ class Page:
         return "\n\n".join(block.text for block in self.blocks)
 
 
-def load_image(path: str | Path) -> np.ndarray:
-    """Read an image file (any path, including non-ASCII names on Windows)."""
-    data = np.fromfile(str(path), dtype=np.uint8)
-    image = cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
-    if image is None:
-        raise ValueError(f"Cannot read image: {path}")
-    if image.dtype == np.uint16:  # 16-bit PNG/TIFF
-        image = (image >> 8).astype(np.uint8)
-    return image
+@dataclass
+class Document:
+    """The result of reading a file: one Page per page (PDFs and TIFFs can have many)."""
+
+    pages: list[Page]
+    source: str | None = None  # the file name, if read from a file
+
+    @property
+    def lines(self) -> list[Line]:
+        return [line for page in self.pages for line in page.lines]
+
+    @property
+    def text(self) -> str:
+        """Page texts separated by a form feed (U+000C) on its own line, the usual
+        page-break character in plain-text OCR output."""
+        return PAGE_BREAK.join(page.text for page in self.pages)
+
+
+#: Between pages in plain-text output: a form feed on a line of its own.
+PAGE_BREAK = "\n\f\n"
 
 
 def crop_line(gray: np.ndarray, rect: RotRect) -> tuple[np.ndarray, np.ndarray]:
@@ -210,8 +222,20 @@ class OCR:
         self.detector = LineDetector(det_path, threads)
         self.recognizer = LineRecognizer(rec_path, threads)
 
-    def read_file(self, path: str | Path, **kw) -> Page:
-        return self.read_image(load_image(path), **kw)
+    def read(self, source: str | Path | np.ndarray, dpi: int = PDF_DPI, **kw) -> Document:
+        """Read a file (image, multi-page TIFF or PDF) or an image array.
+
+        Options (`kw`) are those of read_image: diacritics, digits, tatweel, deskew,
+        denoise, binarize.
+        """
+        if isinstance(source, np.ndarray):
+            return Document([self.read_image(source, **kw)])
+        pages = [self.read_image(img, **kw) for img in load_pages(source, dpi)]
+        return Document(pages, Path(source).name)
+
+    def read_file(self, path: str | Path, **kw) -> Document:
+        """Same as read(path)."""
+        return self.read(path, **kw)
 
     def read_image(
         self,

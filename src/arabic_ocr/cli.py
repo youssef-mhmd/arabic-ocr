@@ -1,15 +1,20 @@
 """Command-line interface.
 
-    arabic-ocr page.png                     # print the text
-    arabic-ocr page.png -f json -o out.json # structured output with boxes
+    arabic-ocr page.png                          # print the text
+    arabic-ocr scan.pdf -o scan.txt              # a PDF (every page, 300 DPI)
+    arabic-ocr page.png -f json -o out.json      # structured output with boxes
+    arabic-ocr ./scans -f json -o results/       # batch: a folder ...
+    arabic-ocr "scans/*.tif" -o results/         # ... or a glob pattern
     arabic-ocr page.png --no-diacritics --no-tatweel --digits western
 
-Images only for now (PNG, JPEG, TIFF, BMP, WebP); PDF support arrives in M4.
+Inputs: PNG, JPEG, TIFF (all pages), BMP, WebP, PDF. With several input files,
+`-o` must be a folder; each result is written there as <name>.<format>.
 """
 
 from __future__ import annotations
 
 import sys
+import time
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
@@ -18,7 +23,7 @@ import typer
 
 from arabic_ocr import __version__
 
-app = typer.Typer(add_completion=False, help="Read Arabic-script text from images.")
+app = typer.Typer(add_completion=False, help="Read Arabic-script text from images and PDFs.")
 
 
 class Format(StrEnum):
@@ -38,14 +43,43 @@ def _print_version(value: bool) -> None:
         raise typer.Exit()
 
 
+def _utf8_console() -> None:
+    # The Windows console may not default to UTF-8; Arabic must not turn into "?".
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
+
+def render(doc, fmt: Format) -> str:
+    """A Document as text in the chosen format."""
+    if fmt is Format.json:
+        from arabic_ocr.export.to_json import document_to_json
+
+        return document_to_json(doc.pages, doc.source)
+    return doc.text
+
+
+def output_names(files: list[Path], fmt: Format) -> dict[Path, str]:
+    """<name>.<format> for every input; inputs that share a name (a.png, a.pdf)
+    keep their extension too (a.png.txt, a.pdf.txt) so nothing is overwritten."""
+    stems = [f.stem for f in files]
+    return {f: (f.name if stems.count(f.stem) > 1 else f.stem) + f".{fmt.value}" for f in files}
+
+
 @app.command()
 def main(
-    file: Annotated[Path, typer.Argument(help="Image to read.", exists=True, dir_okay=False)],
+    target: Annotated[
+        str, typer.Argument(help="An image or PDF file, a folder, or a glob like 'scans/*.png'.")
+    ],
     fmt: Annotated[Format, typer.Option("--format", "-f", help="Output format.")] = Format.txt,
     output: Annotated[
         Path | None,
-        typer.Option("--output", "-o", help="Write to this file instead of the screen."),
+        typer.Option("--output", "-o", help="Output file (one input) or folder (several inputs)."),
     ] = None,
+    recursive: Annotated[
+        bool, typer.Option("--recursive", "-r", help="Also read files in sub-folders.")
+    ] = False,
+    dpi: Annotated[int, typer.Option("--dpi", help="Resolution for PDF pages.")] = 300,
     no_diacritics: Annotated[
         bool, typer.Option("--no-diacritics", help="Remove tashkeel from the output.")
     ] = False,
@@ -71,35 +105,63 @@ def main(
         ),
     ] = False,
 ) -> None:
-    """Read Arabic-script text from FILE."""
-    from arabic_ocr.pipeline import OCR  # imported here so --help and --version stay fast
+    """Read Arabic-script text from images and PDFs."""
+    from arabic_ocr.inputs import find_inputs  # imported here so --help/--version stay fast
+    from arabic_ocr.pipeline import OCR
 
+    _utf8_console()
+    files = find_inputs(target, recursive=recursive)
+    if not files:
+        typer.echo(f"Error: no supported image or PDF files found: {target}", err=True)
+        raise typer.Exit(code=1)
+    batch = len(files) > 1 or Path(target).is_dir()
+    if batch and output is None:
+        typer.echo("Error: several input files need an output folder: -o FOLDER", err=True)
+        raise typer.Exit(code=1)
+
+    options = {
+        "diacritics": not no_diacritics,
+        "tatweel": not no_tatweel,
+        "digits": digits.value,
+        "deskew": not no_deskew,
+        "denoise": denoise,
+        "binarize": binarize,
+    }
     try:
         ocr = OCR()
-        page = ocr.read_file(
-            file,
-            diacritics=not no_diacritics,
-            tatweel=not no_tatweel,
-            digits=digits.value,
-            deskew=not no_deskew,
-            denoise=denoise,
-            binarize=binarize,
-        )
-    except (FileNotFoundError, ValueError) as e:
+    except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1) from e
 
-    if fmt is Format.json:
-        from arabic_ocr.export.to_json import document_to_json
+    if not batch:
+        try:
+            result = render(ocr.read(files[0], dpi=dpi, **options), fmt)
+        except ValueError as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(code=1) from e
+        if output is None:
+            typer.echo(result)
+        else:
+            output.write_text(result + "\n", encoding="utf-8")
+        return
 
-        result = document_to_json([page], file.name)
-    else:
-        result = page.text
-
-    if output is not None:
-        output.write_text(result + "\n", encoding="utf-8")
-    else:
-        # The Windows console may not default to UTF-8; Arabic must not turn into "?".
-        if hasattr(sys.stdout, "reconfigure"):
-            sys.stdout.reconfigure(encoding="utf-8")
-        typer.echo(result)
+    output.mkdir(parents=True, exist_ok=True)
+    names = output_names(files, fmt)
+    failed = 0
+    for i, path in enumerate(files, 1):
+        start = time.perf_counter()
+        try:
+            doc = ocr.read(path, dpi=dpi, **options)
+        except Exception as e:  # keep going: one bad file must not stop a batch
+            failed += 1
+            typer.echo(f"[{i}/{len(files)}] {path}: FAILED ({e})", err=True)
+            continue
+        (output / names[path]).write_text(render(doc, fmt) + "\n", encoding="utf-8")
+        typer.echo(
+            f"[{i}/{len(files)}] {path} -> {names[path]} "
+            f"({len(doc.pages)} page(s), {time.perf_counter() - start:.1f} s)",
+            err=True,
+        )
+    typer.echo(f"Done: {len(files) - failed} of {len(files)} files -> {output}", err=True)
+    if failed:
+        raise typer.Exit(code=1)
