@@ -12,12 +12,14 @@ multiply 8-bit integers much faster, at the cost of a little precision. Only the
 int8 LSTM was 14x *slower* on this CPU.
 
 "Static" means the value range of every layer's input is measured beforehand on
-real examples (calibration): 300 validation line images for the recognizer, 20
-validation pages for the detector.
+real examples (calibration): 300 validation line images for the recognizer, 60
+validation pages for the detector (whose first layer and output head stay float).
 
 Measured for recognizer-v4 (A4 pages, 4 threads, same process): 3.81 -> 2.16 s per
 page; CER unchanged within +-0.03 points on every real and synthetic line set.
-Always re-check accuracy before shipping a quantized model.
+The detector is NOT shipped in int8: even with its first layer and output head in
+float, real screenshot recall fell 95.0% -> 94.5% and printed CER rose 1.83% ->
+1.88%. Always re-check accuracy before shipping a quantized model.
 """
 
 from __future__ import annotations
@@ -46,7 +48,7 @@ def recognizer_samples(n: int = 300) -> list[np.ndarray]:
     return out
 
 
-def detector_samples(n: int = 20) -> list[np.ndarray]:
+def detector_samples(n: int = 60) -> list[np.ndarray]:
     from arabic_ocr.detect.detector import prepare_page
     from training.make_pages import read_pages
 
@@ -73,7 +75,12 @@ def quantize(kind: str, src: Path, out: Path) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         pre = Path(tmp) / "pre.onnx"
         quant_pre_process(str(src), str(pre), skip_symbolic_shape=True)
-        name = onnx.load(str(pre)).graph.input[0].name
+        graph = onnx.load(str(pre)).graph
+        name = graph.input[0].name
+        convs = [n.name for n in graph.node if n.op_type in ("Conv", "ConvTranspose")]
+        # Detector: keep the first layer and the 3-layer output head in float. They
+        # are the most sensitive to rounding (raw pixels in, core map out).
+        exclude = [convs[0], *convs[-3:]] if kind == "detector" else []
 
         class Reader(CalibrationDataReader):
             def __init__(self) -> None:
@@ -86,6 +93,7 @@ def quantize(kind: str, src: Path, out: Path) -> None:
         quantize_static(
             str(pre), str(out), Reader(),
             quant_format=QuantFormat.QDQ, op_types_to_quantize=["Conv"], per_channel=True,
+            nodes_to_exclude=exclude,
             activation_type=QuantType.QUInt8, weight_type=QuantType.QInt8,
         )  # fmt: skip
     print(f"Wrote {out} ({out.stat().st_size / 2**20:.1f} MB) from {len(samples)} samples")
