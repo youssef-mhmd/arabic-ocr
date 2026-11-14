@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import os
 import time
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
@@ -195,6 +196,31 @@ def split_words(
     return words
 
 
+def is_noise(line: Line) -> bool:
+    """True for "lines" that are page noise, not text: decorative borders and rules
+    read as letters, specks, stains. Measured on 1,808 lines of real scans: such
+    lines are short and unsure (ط, وو), mostly symbols (2222م), or one repeated
+    symbol (*****). Page numbers like "- ٤١ -" are kept: confident, and real text.
+    """
+    # Tatweel (ـ) is stretching, not a mark: long runs of it are normal in some fonts.
+    text = charset.strip_tatweel(line.text).replace(" ", "")
+    if not text:
+        return True
+    letters = sum(unicodedata.category(c).startswith("L") for c in text) / len(text)
+    if line.confidence < 0.5:
+        return True
+    if line.confidence < 0.65 and (len(text) <= 3 or letters < 0.5):
+        return True
+    # Ornament rows: one *symbol* (not a letter or digit: الاتحاد has three alefs,
+    # ۶۸۰۰۰ three zeros) repeated, read with some doubt (real lines read ~1.0).
+    common = max(set(text), key=text.count)
+    symbol = unicodedata.category(common)[0] not in "LN"
+    return (
+        symbol and len(text) >= 6 and text.count(common) / len(text) > 0.4
+        and line.confidence < 0.9
+    )  # fmt: skip
+
+
 def postprocess(
     text: str, diacritics: bool = True, digits: Digits = "keep", tatweel: bool = True
 ) -> str:
@@ -246,6 +272,7 @@ class OCR:
         deskew: bool = True,
         denoise: bool = False,
         binarize: bool = False,
+        drop_noise: bool = True,
     ) -> Page:
         clock = _Clock()
         prep = preprocess(image, deskew=deskew, denoise=denoise, binarize_page=binarize)
@@ -281,6 +308,8 @@ class OCR:
             box = _apply(m_full, _rect_pts(0, cw, pad, ch - pad))
             lines.append(Line(text, dec.confidence, box, words))
 
+        if drop_noise:
+            lines = [None if ln is not None and is_noise(ln) else ln for ln in lines]
         kept = [(i, ln) for i, ln in enumerate(lines) if ln is not None]
         aligned = []  # axis-aligned boxes in the straightened page, for reading order
         for i, _ in kept:

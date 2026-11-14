@@ -18,10 +18,18 @@ How it works (the method Tesseract and OCRmyPDF use):
 Arabic order: PDF text always advances left to right. Each word's characters are
 written in *display* order, left to right as they appear on the page: the logical
 text reversed, except that numbers keep their left-to-right digits (bidi.py).
-Viewers rebuild right-to-left text from those positions. Measured with pdfium (the
-engine of Chrome's PDF viewer) on a real page: logical order came back reversed and
-no search matched; display order came back with 1.5% differences and every search
-matched (tests/test_searchable_pdf.py).
+Viewers rebuild right-to-left text from those positions. Measured on a real
+scanned page (192 words), text read back / words found by search:
+
+    method                          pdfium (Chrome/Edge)  MuPDF (Sumatra...)  pdfminer
+    display order (this file)       1.7% / 188            1.2% / 189          reversed
+    logical order, mirrored matrix  7.4% / 189            reversed / 0        0.0%
+      (Tesseract's method; pdfium also flipped brackets)
+    logical order, normal matrix    reversed / 0          -                   -
+
+Display order works in both viewer engines; pdfminer (a library, not a viewer)
+applies no right-to-left rules and reverses Arabic from most PDFs, including ones
+Edge prints itself. Adobe Reader and macOS Preview still need a manual check.
 
 Memory: pages are added one at a time and stored compressed (JPEG or Flate), so
 long PDFs don't keep every full-size page image in memory.

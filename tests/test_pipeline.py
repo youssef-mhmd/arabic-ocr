@@ -236,3 +236,46 @@ def test_postprocess_options():
     assert postprocess(text, diacritics=False, tatweel=False, digits="western") == (
         "جائزتان 2014 كتب"
     )
+
+
+def test_paragraphs_from_short_last_line_and_indent():
+    h = 20
+    # paragraph 1: two full lines + a short last line; paragraph 2: indented first line
+    boxes = [
+        (40, 0, 560, h),
+        (40, 30, 560, 30 + h),
+        (380, 60, 560, 60 + h),  # ends short (left end far from the column edge)
+        (40, 90, 520, 90 + h),  # indented at the right -> also a new paragraph
+        (40, 120, 560, 120 + h),
+        (40, 150, 560, 150 + h),
+    ]
+    assert reading_order(boxes) == [[0, 1, 2], [3, 4, 5]]
+
+
+def test_indent_needs_a_full_previous_line():
+    # a list of short right-aligned items is not split at every line by the indent rule
+    boxes = [(300, y, 520, y + 20) for y in (0, 30, 60)]
+    boxes.append((40, 90, 560, 110))
+    blocks = reading_order(boxes)
+    assert [0, 1, 2] in blocks or blocks[0][:3] == [0, 1, 2]
+
+
+def test_noise_lines_are_dropped():
+    from arabic_ocr.pipeline import Line, is_noise
+
+    def line(text, conf):
+        return Line(text, conf, np.zeros((4, 2), np.float32))
+
+    assert is_noise(line("* *************۵۵** **۵۵", 0.61))  # ornament border
+    assert is_noise(line("(222222م", 0.33))
+    assert is_noise(line("ط", 0.35))  # speck read as a letter
+    assert not is_noise(line("- ٤١ -", 0.85))  # page number
+    assert not is_noise(line("الاتحاد", 0.97))  # repeated letters are fine
+    assert not is_noise(line("الـــجـبـل فــيـدرك", 0.88))  # tatweel runs are fine
+    assert not is_noise(line("۶۸۰۰۰)،", 1.0))
+
+
+def test_ragged_web_paragraph_stays_one_block():
+    # right-aligned, unjustified lines ending at different places (as browsers wrap)
+    boxes = [(x0, y, 560, y + 20) for x0, y in ((120, 0), (260, 30), (80, 60), (300, 90))]
+    assert reading_order(boxes) == [[0, 1, 2, 3]]

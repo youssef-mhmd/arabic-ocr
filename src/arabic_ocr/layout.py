@@ -40,6 +40,11 @@ MAX_CROSSING = 0.15
 MIN_GUTTER = 0.5
 #: Share of lines on the smaller side that must have a neighbour across the gutter.
 MIN_BESIDE = 0.3
+#: A line "ends short" (last line of a paragraph) if its left end stops this many
+#: line heights (or 15% of the column width, if more) before the column's left edge.
+SHORT_LINE = 2.0
+#: A line is indented (first line of a paragraph) by at least this many line heights.
+INDENT = 1.0
 
 
 def row_order(boxes: Sequence[Box], idx: list[int]) -> list[int]:
@@ -60,13 +65,38 @@ def row_order(boxes: Sequence[Box], idx: list[int]) -> list[int]:
 
 
 def _split_blocks(boxes: Sequence[Box], ordered: list[int], h: float) -> list[list[int]]:
-    """Start a new block wherever the vertical gap to the previous line is big."""
+    """Split one column's lines (in reading order) into paragraphs.
+
+    A new paragraph starts after a big vertical gap, or where books mark one:
+    - the previous line ends short: its left end stops well before the column's
+      left edge (the last line of a justified paragraph);
+    - this line is indented at the right while the previous line was not.
+    Lines side by side on one row (menu items, label/value pairs) are never
+    treated this way: they are separate items, see `row_order`.
+    """
+    if not ordered:
+        return []
+    left = min(boxes[i][0] for i in ordered)
+    right = max(boxes[i][2] for i in ordered)
+    short = max(SHORT_LINE * h, 0.15 * (right - left))
+    # "Ends short" only means something in justified text (books), where most
+    # lines reach the left edge. Web and UI text is ragged: lines end anywhere.
+    full = sum(boxes[i][0] - left < 1.0 * h for i in ordered)
+    justified = len(ordered) >= 3 and full >= 0.5 * len(ordered)
     blocks: list[list[int]] = []
     for i in ordered:
-        if blocks and boxes[i][1] - boxes[blocks[-1][-1]][3] < 1.0 * h:
-            blocks[-1].append(i)
-        else:
+        if not blocks:
             blocks.append([i])
+            continue
+        p = blocks[-1][-1]
+        below = boxes[i][1] >= boxes[p][3] - 0.3 * h  # on a new row
+        gap = boxes[i][1] - boxes[p][3] >= 1.0 * h
+        ends_short = justified and below and boxes[p][0] - left > short
+        indented = below and right - boxes[i][2] > INDENT * h and right - boxes[p][2] < 0.5 * h
+        if gap or ends_short or indented:
+            blocks.append([i])
+        else:
+            blocks[-1].append(i)
     return blocks
 
 

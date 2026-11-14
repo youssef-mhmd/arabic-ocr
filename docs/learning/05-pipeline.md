@@ -191,3 +191,27 @@ Why v1 missed screenshot lines: its training pages never had rows of separate sh
 Detector v2 is now the default (`models/detector-v2.onnx`).
 
 Known side effect: in monospace fonts (Courier New) word spaces are as wide as the gaps between menu items, so v2 sometimes splits such a line at its spaces (precision on those pages drops; the text barely changes, since the pieces are read in order).
+
+---
+
+## 11. Paragraphs and page noise (M4)
+
+**Paragraphs.** A big vertical gap used to be the only paragraph signal, so a book page where paragraphs follow each other without extra space came out as one block. Books mark paragraphs in two other ways, and `layout.py` now uses both:
+- the **last line ends short**: its left end stops well before the column's left edge (at least 2 line heights, or 15% of the column width);
+- the **first line is indented** at the right, below a line that was not.
+
+The first signal only works in **justified** text, where most lines reach the left edge. Web and app text is ragged, so lines end anywhere, and the rule would split every line. It is therefore used only when at least half of a column's lines reach the left edge (within one line height).
+
+Measured on synthetic pages with true paragraph labels (paragraph-break F1):
+
+| | before | gap + short + indent | + only in justified text |
+|---|---|---|---|
+| book / two-column pages | 62.5% | 89.3% | **89.2%** |
+| screen / interface pages | 76.9% | 63.0% | **76.8%** |
+
+**Noise.** Decorative borders, rules and specks on scans were read as "text" (`*****۵۵**`, `(222222م`, `ط`). Looking at all 1,808 lines found on the 60 real printed pages, the noise had three shapes. `pipeline.is_noise` drops a line that is:
+- under 0.5 confidence; or
+- under 0.65 confidence and at most 3 characters long or less than half letters; or
+- mostly one repeated *symbol* (not a letter or digit), read with confidence under 0.9.
+
+Two first attempts were too eager, and the measurements showed it: counting tatweel (ـ) as a repeated mark dropped whole Courier New lines (screenshots 3.26% → 5.56%), and counting letters dropped words like الاتحاد (three alefs). Final effect: real printed pages **2.17% → 1.85%** CER (no diacritics), screenshots unchanged (3.26%, recall 95.0%), synthetic pages +0.05 points.
