@@ -247,7 +247,8 @@ def scan_urls(page_title: str, site: Site = SITES["ar"]) -> list[str]:
     scans are on Commons; some are uploaded to the Wikisource itself.
     """
     file_part, _, number = page_title.partition(":")[2].rpartition("/")
-    # (isascii: Python counts Persian digits like ۲۷ as digits too)
+    # Persian Wikisource writes page numbers in Persian digits (.../۸): the URL needs 8.
+    number = charset.convert_digits(number, "western")
     if not (number.isascii() and number.isdigit()):  # a single image file: no page number
         file_part, number = page_title.partition(":")[2], None
     name = file_part.replace(" ", "_")

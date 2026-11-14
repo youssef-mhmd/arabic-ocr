@@ -5,7 +5,7 @@
 #
 # Outputs go to runs/recognizer_v5/. Interrupt any time; run again to resume.
 #
-# Why: on real screenshots v3 fails on text under ~16 px tall (docs/learning/05 §8).
+# Why: on real screenshots v4 inserted spaces inside words after non-joining letters.
 # Fine-tuning ("init_from") starts from v4's best model, which already reads print
 # and normal-size screen text well. Half of v4 is v3-style lines, so print is not
 # forgotten. 3 passes over 400k lines = 1.2M images, ~40-60 minutes on the RTX 5060.

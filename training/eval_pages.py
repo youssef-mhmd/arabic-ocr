@@ -210,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
             score_boxed(page, meta, t)
         else:
             score_text(page, meta, t)
-        tallies[meta.get("layout") or meta["kind"]].add(t)
+        tallies[meta.get("layout") or meta.get("style") or meta["kind"]].add(t)
         per_page[key] = t.report() | {"hyp": page.text} if args.real else t.report()
         if n % 25 == 0:
             print(f"  {n} pages", flush=True)
