@@ -72,3 +72,26 @@ How it was found: memory after every 4 pages, with the arena on (592 → 676 MB)
 - The same trick on the **detector** cost accuracy (screenshot recall 95.0% → 94.5%), even with its first and last layers left in float, so the detector stays float.
 
 Rule kept throughout: never ship a faster model without re-measuring accuracy on the real test sets.
+
+---
+
+## 7. Real test sets for Persian and Urdu, and page borders
+
+`training/make_real_pages.py printed --site fa|ur` builds Persian and Urdu sets from their Wikisources, the same way as the Arabic one. Each page is tagged by its style after looking at it: *naskh* (print) or *nastaliq* (the flowing Persian/Urdu script; handwritten-looking lithographs count here). Only naskh counts for the PRD's v1 target (≤ 4%).
+
+| set | pages | CER (no diacritics) |
+|---|---|---|
+| Persian naskh | 12 | 9.2% |
+| Urdu naskh (one 1920s letterpress book) | 11 | 35.6% |
+| nastaliq (fa + ur) | 5 | 54–78% (not a v1 target) |
+
+**Page frames.** The Urdu book prints a ruled frame around the text; the vertical frame line next to each text line was read as an extra alef. `preprocess.remove_rules` paints long, thin vertical lines with the paper colour before detection: Urdu 41.4% → 35.6%, nothing else changed. Three traps on the way, each caught by measuring:
+- coloured panels on screenshots are long *and thick*: only thin lines may be removed;
+- a page **shadow** made whole regions "ink" under one global threshold: a *local* (adaptive) threshold fixed it;
+- on a small image "10% of the page height" is shorter than a tall alef: a rule must also be at least 4 typical letter heights long.
+
+## 8. Real training lines, and the robot policy
+
+The best way to close the gap to real (especially old) print is to train on real lines. `training/make_real_lines.py` does this from proofread Wikisource scans: run our OCR on a page, match each found line to the transcription line it reads most like, and keep clear matches with the human-checked text as the label.
+
+It works (e.g. 15 of 17 lines kept on a page of «كليلة ودمنة»), but after a few thousand requests Wikimedia refused further downloads: its **User-Agent policy** requires automated clients to identify themselves with a contact address (e-mail or web page). Collection is paused until the project has such a contact to put there.

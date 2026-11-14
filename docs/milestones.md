@@ -107,6 +107,8 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Exit criteria:** every v1 accuracy target in PRD §9 is met. All output formats pass tests on all 3 OSes.
 
+**Status (2026-11-15):** 7 of 11 items done. Real-page CER (no diacritics): Arabic printed 1.77% ✅ (≤ 2%); screenshots 3.67% ❌ (≤ 1%; common UI fonts already ~≤ 1%); Persian naskh 9.2% ❌ and Urdu naskh 35.6% ❌ (≤ 4%). Speed ~1.9 s per A4 page (A/B), memory ~150 MB, models 26 MB. Blocked on the owner: a contact for Wikimedia's User-Agent policy (real training lines), a GitHub repository (CI on 3 OSes), the Adobe/Preview check of the searchable PDF. See docs/learning/06.
+
 ---
 
 ## M5: Desktop app and v1.0 release 🖥️
