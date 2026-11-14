@@ -103,3 +103,24 @@ def test_ocr_to_pdf_end_to_end(tmp_path):
     assert text == " ".join(doc.text.split())
     search = tp.search("الرحمن")
     assert search.get_next() is not None
+
+
+def test_pdf_input_keeps_the_original_page(tmp_path):
+    """A PDF input is copied unchanged; only the invisible text is added."""
+    import pikepdf
+    from PIL import Image
+
+    src = tmp_path / "in.pdf"
+    Image.new("L", (600, 200), 255).save(src, resolution=150)  # 4 x 1.33 inch page
+    pdf = SearchablePdf()
+    with pikepdf.open(src) as original:
+        assert pdf.add_text_to_page(original.pages[0], _page(), dpi=150)
+        pdf.save(tmp_path / "out.pdf")
+    text, _tp = _read_back(tmp_path / "out.pdf")
+    assert text == "الكتاب المفيد جدا صدر عام 2014 م"
+    with pikepdf.open(tmp_path / "out.pdf") as out:
+        assert len(out.pages[0].images) == 1  # the original image, not a new one
+
+    with pikepdf.open(src) as original:  # rotated pages fall back to add_page
+        original.pages[0].obj.Rotate = 90
+        assert not SearchablePdf().add_text_to_page(original.pages[0], _page(), dpi=150)

@@ -217,6 +217,31 @@ class SearchablePdf:
         )
         self.pdf.pages.append(pdf_page)
 
+    def add_text_to_page(self, original: pikepdf.Page, page: Page, dpi: float) -> bool:
+        """Copy a page of an input PDF unchanged and lay the invisible text over it
+        (smaller and lossless, unlike re-storing the rendered image). `page` is the
+        OCR of that page rendered at `dpi`. Returns False (and adds nothing) for
+        pages whose coordinates are rotated or cropped: the caller then falls back
+        to add_page."""
+        box = [float(v) for v in original.mediabox]
+        crop = [float(v) for v in original.obj.get("/CropBox", original.mediabox)]
+        if int(original.obj.get("/Rotate", 0)) % 360 != 0 or crop != box:
+            return False
+        x0, y0, _x1, y1 = box
+        scale = 72.0 / dpi
+        layer = self._text_layer(page, scale, y1 - y0)
+        if x0 or y0:  # the page's origin is not at (0, 0): shift the text with it
+            layer = f"1 0 0 1 {x0:.2f} {y0:.2f} cm\n".encode("ascii") + layer
+        self.pdf.pages.append(original)
+        new = self.pdf.pages[-1]
+        # (add_resource also handles resources the page inherits from its parent)
+        name = new.add_resource(self.font, Name.Font, Name("/FOCR"), replace_existing=True)
+        layer = layer.replace(b"/F0 ", str(name).encode("ascii") + b" ")
+        # Wrap the original content in q/Q so its graphics state can't leak into ours.
+        new.contents_add(self.pdf.make_stream(b"q\n"), prepend=True)
+        new.contents_add(self.pdf.make_stream(b"Q\nq\n" + layer + b"\nQ\n"))
+        return True
+
     def save(self, path: str | Path) -> None:
         self.pdf.save(str(path), compress_streams=True)
 
@@ -249,10 +274,17 @@ def ocr_to_pdf(ocr, source: str | Path, out: str | Path, dpi: int = 300, **optio
     page_dpi = dpi if suffix in PDF_SUFFIXES else image_dpi(source)
     quality = None if suffix in LOSSLESS_SUFFIXES else 85
     pdf = SearchablePdf()
+    original = pikepdf.open(source) if suffix in PDF_SUFFIXES else None
     pages = []
-    for image in load_pages(source, dpi):
-        page = ocr.read_image(image, **options)
-        pdf.add_page(image, page, dpi=page_dpi, jpeg_quality=quality)
-        pages.append(page)
-    pdf.save(out)
+    try:
+        for i, image in enumerate(load_pages(source, dpi)):
+            page = ocr.read_image(image, **options)
+            # PDF input: keep the original page, add only the text layer.
+            if original is None or not pdf.add_text_to_page(original.pages[i], page, dpi):
+                pdf.add_page(image, page, dpi=page_dpi, jpeg_quality=quality)
+            pages.append(page)
+        pdf.save(out)
+    finally:
+        if original is not None:
+            original.close()
     return Document(pages, source.name)
