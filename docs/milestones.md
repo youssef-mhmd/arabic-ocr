@@ -100,7 +100,7 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 - [x] Exporters: txt, JSON, **searchable PDF** (pikepdf invisible text layer), **hOCR**, **ALTO XML**
 - [ ] Check the searchable PDF: text is selectable and searchable in common PDF viewers, Arabic copies correctly
 - [x] Public library API: `OCR().read(path_or_image)` → typed result objects; docstrings
-- [ ] Local HTTP API: `arabic-ocr serve` (FastAPI, binds to 127.0.0.1 by default), `POST /ocr`
+- [x] Local HTTP API: `arabic-ocr serve` (FastAPI, binds to 127.0.0.1 by default), `POST /ocr`
 - [ ] Optional lexicon/word-list correction in postprocessing
 - [ ] Fine-tune on real/augmented data to close the domain gap
 - [ ] Performance tuning to reach NFR-3/4/5 (≤ 2 s/page, ≤ 1 GB RAM, models ≤ 50 MB)

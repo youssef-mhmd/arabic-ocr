@@ -8,6 +8,7 @@
     arabic-ocr scan.pdf -f pdf -o out.pdf        # searchable PDF
     arabic-ocr scan.tif -f alto -o out.xml       # also: -f hocr
     arabic-ocr page.png --no-diacritics --no-tatweel --digits western
+    arabic-ocr serve --port 8000                 # local HTTP API (see api.py)
 
 Inputs: PNG, JPEG, TIFF (all pages), BMP, WebP, PDF. With several input files,
 `-o` must be a folder; each result is written there as <name>.<format>.
@@ -100,6 +101,10 @@ def main(
         bool, typer.Option("--recursive", "-r", help="Also read files in sub-folders.")
     ] = False,
     dpi: Annotated[int, typer.Option("--dpi", help="Resolution for PDF pages.")] = 300,
+    host: Annotated[
+        str, typer.Option("--host", help="serve: address to listen on (default: this computer).")
+    ] = "127.0.0.1",
+    port: Annotated[int, typer.Option("--port", help="serve: port number.")] = 8000,
     no_diacritics: Annotated[
         bool, typer.Option("--no-diacritics", help="Remove tashkeel from the output.")
     ] = False,
@@ -125,7 +130,15 @@ def main(
         ),
     ] = False,
 ) -> None:
-    """Read Arabic-script text from images and PDFs."""
+    """Read Arabic-script text from images and PDFs.
+
+    `arabic-ocr serve` starts the local HTTP API instead (see --host, --port).
+    """
+    if target == "serve" and not Path(target).exists():
+        from arabic_ocr.api import serve
+
+        serve(host, port)
+        return
     from arabic_ocr.inputs import find_inputs  # imported here so --help/--version stay fast
     from arabic_ocr.pipeline import OCR
 
