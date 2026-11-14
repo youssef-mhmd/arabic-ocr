@@ -44,7 +44,7 @@ from arabic_ocr.recognize.recognizer import LineRecognizer
 #: Where models are looked for: $ARABIC_OCR_MODELS, else the repo's models/ folder.
 _REPO_MODELS = Path(__file__).resolve().parents[2] / "models"
 MODELS_DIR = Path(os.environ.get("ARABIC_OCR_MODELS", _REPO_MODELS))
-DETECTOR = "detector-v1.onnx"
+DETECTOR = "detector-v2.onnx"
 RECOGNIZER = "recognizer-v4.onnx"
 
 #: Margin added around a detected line before reading it, as a fraction of the

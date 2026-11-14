@@ -1,0 +1,41 @@
+# Second text-line detector run (M3): fine-tune detector_v1 on pages_v3.
+#
+#   uv run --group train python -m training.train_detector training/configs/detector_v2.yaml
+#
+# Outputs go to runs/<name>/ (git-ignored). Interrupt any time; run again to resume.
+#
+# Why: on real screenshots detector-v1 found only 81% of the lines (target 95%).
+# It merged rows of short menu items and missed 9-12 px text: pages_v1 had neither.
+# pages_v3 adds interface pages with both, and fixes pages_v1's unlabelled lines.
+# Starting from v1's weights; v1's validation score stopped improving after 3 of
+# 12 passes, so 4 passes here (~240k crops, ~45 min on the RTX 5060).
+
+name: detector_v2
+seed: 2025
+dataset: data/datasets/pages_v3
+shard_size: 500
+init_from: runs/detector_v1/best.pt
+
+model: {}
+
+crop: 640
+scale_range: [0.45, 1.3]
+crops_per_page: 2
+batch_size: 16
+
+epochs: 4
+
+optimizer:
+  lr: 0.0005          # half of v1's peak: adjust the weights, don't start over
+  weight_decay: 0.0001
+  warmup_samples: 5000
+  min_lr_fraction: 0.02
+  grad_clip: 5.0
+
+amp: bf16
+num_workers: 8
+
+max_side: 1536
+val_pages: 300
+log_every_steps: 100
+val_every_samples: 60000

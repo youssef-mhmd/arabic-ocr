@@ -1,0 +1,35 @@
+# Third synthetic page dataset for the text-line detector (M3).
+#
+#   uv run python -m training.make_pages training/configs/pages_v3.yaml
+#
+# pages_v2 plus a new page kind, "ui" (training/page.py compose_ui): application and
+# web interfaces with header bars of separate menu items, sidebars, rows of cards,
+# label/value rows, and small 9-18 px text. On real screenshots detector-v1 found
+# only 81% of the lines: it merged rows of short items and missed tiny text, which
+# it had never seen. About 15 minutes on the owner's 16-thread laptop, ~12 GB.
+#
+name: pages_v3
+seed: 5678
+
+text_sources:
+  - {name: wikipedia_ar, weight: 0.45}
+  - {name: wikisource_ar, weight: 0.12}
+  - {name: wikisource_ar_tashkeel, weight: 0.10}
+  - {name: tanzil_quran, weight: 0.05}
+  - {name: wikipedia_fa, weight: 0.14}
+  - {name: wikipedia_ur, weight: 0.14}
+
+samples:
+  train: 30000
+  val: 500
+  test: 500
+
+shard_size: 500
+
+# Overrides for training/page.py PageConfig (any field not listed keeps its default).
+page:
+  kind_weights: {book: 0.35, columns: 0.20, screen: 0.15, ui: 0.30}
+  ui_size: [9, 18]
+
+style_weights:
+  nastaliq: 2.0

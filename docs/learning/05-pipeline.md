@@ -170,3 +170,24 @@ Screenshot pages by group (v4): common interface fonts 2.3%, rare/display fonts 
 - Monospace fonts (Courier New): the model inserts spaces inside words.
 - Detection recall 81%: small menu items merged into one box, tiny lines missed. The detector has never been trained on small interface text.
 - Tatweel: on stretched fonts the model writes ـ (kashida) that is not in the text. The scores ignore it; users can remove it with `--no-tatweel` (PRD FR-9).
+
+---
+
+## 10. Detector v2: interface pages
+
+Why v1 missed screenshot lines: its training pages never had rows of separate short items (menus, buttons, tags, label/value pairs) or text below ~13 px, so it merged menu items into one box and missed tiny lines.
+
+`pages_v3` (`training/configs/pages_v3.yaml`) adds a page kind "ui" (`training/page.py`, `compose_ui`): header bars with separate menu items, sidebars, rows of cards, label/value rows, 9–18 px text. 30% of pages; 31k pages in ~18 minutes. Detector v2 was **fine-tuned** from v1 for 4 passes (240k crops, ~45 minutes).
+
+| Test | detector-v1 | detector-v2 |
+|---|---|---|
+| Synthetic pages_v2 test, F1 | 99.5% | 99.7% |
+| Synthetic interface pages (pages_v3 "ui"), recall | 79.1% | 97.3% |
+| **Real screenshots, recall** | 81.4% | **95.0%** |
+| Real screenshots, CER (no diacritics) | 3.56% | 3.26% |
+| **Real printed pages, CER (no diacritics)** | 2.82% | **2.17%** |
+| A4 page, 4 threads | 2.44 s | 2.10 s |
+
+Detector v2 is now the default (`models/detector-v2.onnx`).
+
+Known side effect: in monospace fonts (Courier New) word spaces are as wide as the gaps between menu items, so v2 sometimes splits such a line at its spaces (precision on those pages drops; the text barely changes, since the pieces are read in order).

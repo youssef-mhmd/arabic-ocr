@@ -92,6 +92,10 @@ def validate_pages(model, pages, device, max_side: int, amp) -> Counts:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Windows Python uses a legacy codepage when output goes to a file.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description="Train the text-line detector.")
     parser.add_argument("config", type=Path)
     parser.add_argument("--max-samples", type=int)
@@ -132,6 +136,11 @@ def main(argv: list[str] | None = None) -> int:
         opt.load_state_dict(ckpt["optimizer"])
         state = ckpt["state"]
         print(f"Resumed from {last}: epoch {state['epoch']}, {state['seen']:,} crops seen")
+    elif cfg.get("init_from"):
+        # Fine-tuning: start from another run's weights (not its optimizer or progress).
+        src = ROOT / cfg["init_from"]
+        model.load_state_dict(torch.load(src, map_location=device, weights_only=False)["model"])
+        print(f"Starting {cfg['name']} from the weights of {src}")
     else:
         print(f"Starting {cfg['name']}: {count_parameters(model):,} weights")
 

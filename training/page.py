@@ -44,6 +44,8 @@ class PageConfig:
     strip_diacritics_prob: float = 0.6  # per page
     rotate_prob: float = 0.4
     max_rotate_deg: float = 3.0
+    #: font sizes (px) on 'ui' pages (added for pages_v3; only used if kind_weights has 'ui')
+    ui_size: tuple[int, int] = (9, 18)
 
 
 @dataclass
@@ -297,6 +299,148 @@ def compose_screen(comp, rng, texts, picker, cfg) -> None:
     comp.lines = [ln for ln in comp.lines if ln.quad[2, 1] <= H]
 
 
+def _ui_colors(rng, dark: bool, tinted: bool = False) -> tuple[float, float]:
+    """(background, text) gray levels with readable contrast."""
+    bg = rng.uniform(0, 60) if dark else rng.uniform(215, 255)
+    if tinted:
+        bg = rng.uniform(25, 110) if rng.random() < 0.5 else rng.uniform(160, 240)
+    fg = rng.uniform(185, 255) if bg < 128 else rng.uniform(0, max(0.0, min(90, bg - 100)))
+    return bg, fg
+
+
+def _ui_row(comp, rng, texts, picker, strip, size, x0, x1, y, gap_range) -> int | None:
+    """Short separate items side by side, right to left (a nav bar, buttons, tags).
+    Each item is its own line label. Returns the row height, or None if nothing fit."""
+    right, tallest = x1, None
+    for _ in range(rng.randint(2, 7)):
+        item = " ".join(_text(texts, rng, strip, 3).split()[: rng.randint(1, 3)])
+        font = _pick_font(picker, item)
+        if font is None:
+            break
+        try:
+            w = advance_width(item, font.path, size)
+        except MissingGlyphError:
+            continue
+        if right - w < x0:
+            break
+        h = comp.place(item, font.path, size, int(right), y)
+        if h is None:
+            break
+        tallest = max(tallest or 0, h)
+        right -= w + size * rng.uniform(*gap_range)
+    return tallest
+
+
+def _ui_region(comp, rng, texts, picker, strip, dark, x0, x1, y, y_end, small) -> None:
+    """Fill one region (main column, sidebar, card) with interface blocks."""
+    while y < y_end:
+        kind = rng.choice(["title", "para", "para", "row", "row", "list", "keyvalue"])
+        size = rng.randint(*small)
+        if kind == "title":
+            size = int(size * rng.uniform(1.2, 2.0))
+        pitch = int(size * rng.uniform(1.35, 1.9))
+        bg, fg = _ui_colors(rng, dark, tinted=rng.random() < 0.2)
+        pad = int(size * rng.uniform(0.3, 0.9))
+        block = Block(x0, y, x1, y + pad, bg=bg, fg=fg)
+        comp.blocks.append(block)
+        top = y + pad
+        if kind == "row":
+            h = _ui_row(comp, rng, texts, picker, strip, size, x0 + pad, x1 - pad, top, (0.6, 3.0))
+            end = top + (h or 0)
+        elif kind == "keyvalue":  # label on the right, its value on the left, per row
+            end = top
+            for _ in range(rng.randint(2, 6)):
+                if end + pitch > y_end:
+                    break
+                label = " ".join(_text(texts, rng, strip, 3).split()[: rng.randint(1, 3)])
+                value = " ".join(_text(texts, rng, strip, 3).split()[: rng.randint(1, 4)])
+                lf, vf = _pick_font(picker, label), _pick_font(picker, value)
+                if lf is None or vf is None:
+                    break
+                try:
+                    lw = advance_width(label, lf.path, size)
+                    vw = advance_width(value, vf.path, size)
+                except MissingGlyphError:
+                    continue
+                # The value sits left of the label with a clear gap, never overlapping.
+                v_right = min(x0 + (x1 - x0) // 2, x1 - pad - lw - 2 * size)
+                if comp.place(label, lf.path, size, x1 - pad, end, y_end) is None:
+                    break
+                if v_right - vw >= x0 + pad:
+                    comp.place(value, vf.path, size, int(v_right), end, y_end)
+                end += pitch
+        elif kind == "list":
+            end = top
+            for _ in range(rng.randint(2, 7)):
+                item = " ".join(_text(texts, rng, strip, 3).split()[: rng.randint(1, 5)])
+                font = _pick_font(picker, item)
+                if font is None or comp.place(item, font.path, size, x1 - pad, end, y_end) is None:
+                    break
+                end += pitch
+        else:
+            n = rng.randint(2, 8) if kind == "title" else rng.randint(8, 60)
+            text = " ".join(_text(texts, rng, strip, n).split()[:n])
+            font = _pick_font(picker, text, core_only=kind != "title")
+            if font is None:
+                break
+            end = comp.paragraph(
+                text, font, size, x0 + pad, x1 - pad, top, pitch, False, max_y=y_end
+            )
+        block.y1 = min(comp.ink.shape[0], end + pad)
+        y = block.y1 + int(size * rng.uniform(0.3, 1.5))
+
+
+def compose_ui(comp, rng, texts, picker, cfg) -> None:
+    """Application/web interface (added for pages_v3): a header bar with separate
+    menu items, then one region, a main column with a sidebar, or a row of cards.
+    Text is small (cfg.ui_size), as on real screens: the detector had never seen
+    rows of separate short items or 9-12 px text, and merged or missed them."""
+    H, W = comp.ink.shape
+    dark = rng.random() < 0.3
+    strip = rng.random() < 0.9
+    page_bg, page_fg = _ui_colors(rng, dark)
+    comp.blocks.append(Block(0, 0, W, H, bg=page_bg, fg=page_fg))
+    y = 0
+    if rng.random() < 0.75:  # header bar
+        size = rng.randint(*cfg.ui_size)
+        bar_h = int(size * rng.uniform(2.2, 3.5))
+        bg, fg = _ui_colors(rng, dark, tinted=rng.random() < 0.5)
+        comp.blocks.append(Block(0, 0, W, bar_h, bg=bg, fg=fg))
+        margin = int(W * rng.uniform(0.01, 0.05))
+        _ui_row(comp, rng, texts, picker, strip, size, margin, W - margin,
+                (bar_h - int(size * 1.4)) // 2, (0.8, 3.0))  # fmt: skip
+        y = bar_h + int(size * rng.uniform(0.5, 2.0))
+    margin = int(W * rng.uniform(0.01, 0.08))
+    layout = rng.choices(["single", "sidebar", "cards"], weights=[0.45, 0.35, 0.2])[0]
+    y_end = int(H * 0.97)
+    if layout == "single":
+        _ui_region(comp, rng, texts, picker, strip, dark, margin, W - margin, y, y_end,
+                   cfg.ui_size)  # fmt: skip
+    elif layout == "sidebar":
+        gutter = int(W * rng.uniform(0.015, 0.05))
+        main_w = int((W - 2 * margin - gutter) * rng.uniform(0.6, 0.78))
+        side_w = W - 2 * margin - gutter - main_w
+        if rng.random() < 0.7:  # main column on the right (read first in RTL)
+            regions = [(W - margin - main_w, W - margin), (margin, margin + side_w)]
+        else:  # sidebar on the right
+            regions = [(W - margin - side_w, W - margin), (margin, margin + main_w)]
+        for rx0, rx1 in regions:
+            _ui_region(comp, rng, texts, picker, strip, dark, rx0, rx1, y, y_end, cfg.ui_size)
+    else:
+        n = rng.randint(2, 4)
+        gutter = int(W * rng.uniform(0.015, 0.04))
+        card_w = (W - 2 * margin - (n - 1) * gutter) // n
+        card_end = min(y_end, y + int(H * rng.uniform(0.3, 0.6)))
+        for c in range(n):
+            right = W - margin - c * (card_w + gutter)
+            _ui_region(comp, rng, texts, picker, strip, dark, right - card_w, right, y,
+                       card_end, cfg.ui_size)  # fmt: skip
+        y2 = card_end + int(H * 0.03)
+        _ui_region(comp, rng, texts, picker, strip, dark, margin, W - margin, y2, y_end,
+                   cfg.ui_size)  # fmt: skip
+    comp.lines = [ln for ln in comp.lines if ln.quad[2, 1] <= H]
+
+
 # ---------------------------------------------------------------------------
 # Appearance
 # ---------------------------------------------------------------------------
@@ -365,12 +509,22 @@ def make_page(texts, picker: FontPicker, rng: random.Random, np_rng, cfg: PageCo
     if kind == "screen":
         w = rng.randint(700, 1400)
         h = int(w * rng.uniform(0.55, 1.9))  # landscape window to phone screen
+    elif kind == "ui":
+        if rng.random() < 0.8:  # desktop window or full screen
+            w = rng.randint(1000, 1920)
+            h = int(w * rng.uniform(0.5, 0.8))
+        else:  # narrow (phone-like) window
+            w = rng.randint(360, 600)
+            h = int(w * rng.uniform(1.6, 2.2))
     else:
         w = rng.randint(*cfg.page_width)
         h = int(w * rng.uniform(1.3, 1.45))  # roughly A4 / letter
     comp = PageComposer(w, h)
     if kind == "screen":
         compose_screen(comp, rng, texts, picker, cfg)
+        img = finish_screen(comp, np_rng)
+    elif kind == "ui":
+        compose_ui(comp, rng, texts, picker, cfg)
         img = finish_screen(comp, np_rng)
     else:
         compose_book(comp, rng, texts, picker, cfg, columns=2 if kind == "columns" else 1)
