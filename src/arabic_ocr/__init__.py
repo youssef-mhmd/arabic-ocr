@@ -5,6 +5,8 @@
     print(result.text)
     for line in result.lines:
         print(line.box, line.text, line.confidence)
+    result.save("page.json")               # also .txt, .hocr, .xml (ALTO)
+    OCR().to_pdf("scan.pdf", "searchable.pdf")
 
 This is the runtime package. It must never import torch; trained models are
 shipped as ONNX files and run with ONNX Runtime.
@@ -14,13 +16,13 @@ from importlib.metadata import version
 
 __version__ = version("arabic-ocr")
 
-__all__ = ["OCR", "Document", "Page", "__version__"]
+__all__ = ["OCR", "Block", "Document", "Line", "Page", "Word", "__version__"]
 
 
 def __getattr__(name: str):
     # Loaded on first use, so `import arabic_ocr` (and `arabic-ocr --version`) stays
     # fast and doesn't load ONNX Runtime or OpenCV.
-    if name in ("OCR", "Document", "Page"):
+    if name in ("OCR", "Block", "Document", "Line", "Page", "Word"):
         from arabic_ocr import pipeline
 
         return getattr(pipeline, name)

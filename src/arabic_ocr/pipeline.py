@@ -62,21 +62,30 @@ Digits = Literal["keep", "western", "arabic"]
 
 @dataclass
 class Word:
+    """One word. `box` is 4 corner points (x, y) in pixels of the input image, in
+    the order top-left, top-right, bottom-right, bottom-left (float32, shape (4, 2)).
+    `confidence` is 0-1. `text` is in logical Unicode order."""
+
     text: str
     confidence: float
-    box: np.ndarray  # (4, 2) float32: top-left, top-right, bottom-right, bottom-left
+    box: np.ndarray
 
 
 @dataclass
 class Line:
+    """One text line, with its words in reading order (right to left). Box and
+    confidence as for Word."""
+
     text: str
     confidence: float
-    box: np.ndarray  # (4, 2) float32: top-left, top-right, bottom-right, bottom-left
+    box: np.ndarray
     words: list[Word] = field(default_factory=list)
 
 
 @dataclass
 class Block:
+    """A group of lines read together: a paragraph, heading or list item."""
+
     lines: list[Line]
 
     @property
@@ -92,6 +101,8 @@ class Block:
 
 @dataclass
 class Page:
+    """One page: its blocks in reading order (columns right to left)."""
+
     width: int
     height: int
     angle: float  # deskew rotation applied, degrees
@@ -125,6 +136,40 @@ class Document:
         """Page texts separated by a form feed (U+000C) on its own line, the usual
         page-break character in plain-text OCR output."""
         return PAGE_BREAK.join(page.text for page in self.pages)
+
+    def to_json(self) -> str:
+        """JSON (schema arabic-ocr/1): pages -> blocks -> lines -> words, with boxes."""
+        from arabic_ocr.export.to_json import document_to_json
+
+        return document_to_json(self.pages, self.source)
+
+    def to_hocr(self) -> str:
+        """hOCR 1.2 (HTML)."""
+        from arabic_ocr.export.xml_formats import to_hocr
+
+        return to_hocr(self)
+
+    def to_alto(self) -> str:
+        """ALTO 4.2 XML."""
+        from arabic_ocr.export.xml_formats import to_alto
+
+        return to_alto(self)
+
+    def save(self, path: str | Path) -> None:
+        """Write to a file; the format comes from the extension: .txt, .json,
+        .hocr/.html, .xml (ALTO). For a searchable PDF use OCR.to_pdf (it needs the
+        page images, which a Document does not keep)."""
+        suffix = Path(path).suffix.lower()
+        writers = {
+            ".txt": lambda: self.text,
+            ".json": self.to_json,
+            ".hocr": self.to_hocr,
+            ".html": self.to_hocr,
+            ".xml": self.to_alto,
+        }
+        if suffix not in writers:
+            raise ValueError(f"Unknown output type '{suffix}' (use .txt .json .hocr .xml)")
+        Path(path).write_text(writers[suffix]() + "\n", encoding="utf-8")
 
 
 #: Between pages in plain-text output: a form feed on a line of its own.
@@ -244,7 +289,11 @@ class OCR:
         rec_path = Path(recognizer) if recognizer else MODELS_DIR / RECOGNIZER
         for p in (det_path, rec_path):
             if not p.is_file():
-                raise FileNotFoundError(f"Model not found: {p}")
+                raise FileNotFoundError(
+                    f"Model not found: {p}. Put the .onnx models in a folder and set the "
+                    "ARABIC_OCR_MODELS environment variable to it, or pass detector= and "
+                    "recognizer= paths to OCR()."
+                )
         self.detector = LineDetector(det_path, threads)
         self.recognizer = LineRecognizer(rec_path, threads)
 
@@ -262,6 +311,13 @@ class OCR:
     def read_file(self, path: str | Path, **kw) -> Document:
         """Same as read(path)."""
         return self.read(path, **kw)
+
+    def to_pdf(self, source: str | Path, out: str | Path, dpi: int = PDF_DPI, **kw) -> Document:
+        """OCR a file into a searchable PDF (the pages with an invisible text layer)
+        and return the Document. Options as for read()."""
+        from arabic_ocr.export.searchable_pdf import ocr_to_pdf
+
+        return ocr_to_pdf(self, source, out, dpi=dpi, **kw)
 
     def read_image(
         self,

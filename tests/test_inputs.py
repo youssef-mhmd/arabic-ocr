@@ -103,3 +103,35 @@ def test_cli_batch_folder(tmp_path):
 
     no_out = CliRunner().invoke(app, [str(src)])
     assert no_out.exit_code == 1 and "output folder" in no_out.output
+
+
+@pytest.mark.skipif(
+    not (NASKH.exists() and (MODELS / "detector-v2.onnx").exists()), reason="fonts/models"
+)
+def test_public_library_api(tmp_path):
+    import json
+
+    from arabic_ocr import OCR, Document, Line, Word
+    from training.render import render_line
+
+    ink = render_line("بسم الله الرحمن الرحيم", NASKH, 40)
+    page = np.full((ink.shape[0] + 80, ink.shape[1] + 80), 255, np.uint8)
+    page[40:-40, 40:-40] = 255 - ink
+    Image.fromarray(page).save(tmp_path / "page.png")
+
+    ocr = OCR()
+    result = ocr.read(tmp_path / "page.png")
+    assert isinstance(result, Document) and result.source == "page.png"
+    assert "الرحمن" in result.text
+    line = result.lines[0]
+    assert isinstance(line, Line) and isinstance(line.words[0], Word)
+    assert line.box.shape == (4, 2) and 0 <= line.confidence <= 1
+
+    assert ocr.read(page).text == result.text  # an image array works too
+    for ext in (".txt", ".json", ".hocr", ".xml"):
+        result.save(tmp_path / f"out{ext}")
+    assert json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))["pages"]
+    with pytest.raises(ValueError, match="Unknown output type"):
+        result.save(tmp_path / "out.docx")
+    pdf_doc = ocr.to_pdf(tmp_path / "page.png", tmp_path / "out.pdf")
+    assert (tmp_path / "out.pdf").stat().st_size > 0 and pdf_doc.text == result.text
