@@ -4,7 +4,7 @@
     uv run python -m training.benchmark_speed scans/*.png          # your own pages
     uv run python -m training.benchmark_speed --threads 4 --repeat 3
 
-The M3 target (PRD): an A4 page at 300 DPI (2480 x 3508 px) in <= 3 s on a 4-core
+The PRD target (NFR-3): an A4 page at 300 DPI (2480 x 3508 px) in <= 2 s on a 4-core
 CPU. `--threads 4` limits ONNX Runtime to 4 threads to imitate that machine.
 
 Without image arguments it takes book pages from the pages_v2 test split and
@@ -33,7 +33,7 @@ from training.make_pages import read_pages
 
 PAGES = Path("data/datasets/pages_v2/test")
 A4_WIDTH = 2480  # pixels at 300 DPI
-TARGET_SECONDS = 3.0
+TARGET_SECONDS = 2.0  # PRD NFR-3 (M3 used 3 s)
 
 
 def synthetic_a4(count: int) -> list[tuple[str, np.ndarray, list[np.ndarray]]]:

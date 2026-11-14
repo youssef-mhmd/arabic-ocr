@@ -47,7 +47,8 @@ from arabic_ocr.recognize.recognizer import LineRecognizer
 _REPO_MODELS = Path(__file__).resolve().parents[2] / "models"
 MODELS_DIR = Path(os.environ.get("ARABIC_OCR_MODELS", _REPO_MODELS))
 DETECTOR = "detector-v2.onnx"
-RECOGNIZER = "recognizer-v4.onnx"
+#: Convolutions in int8 (training/quantize.py): ~1.8x faster on CPU, same CER.
+RECOGNIZER = "recognizer-v4-int8.onnx"
 
 #: Margin added around a detected line before reading it, as a fraction of the
 #: line's height: above/below, and at both ends. Detected boxes already hug the ink

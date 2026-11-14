@@ -63,6 +63,10 @@ def boxes_from_prob(prob: np.ndarray, page: PreparedPage, **kw) -> list[Detectio
 class LineDetector:
     def __init__(self, model_path: str | Path, threads: int | None = None) -> None:
         opts = ort.SessionOptions()
+        # No memory arena: pages and lines all have different sizes, so the arena
+        # kept growing (600+ MB after 20 pages); without it memory stays ~140 MB
+        # for any number of pages, ~2% slower (measured A/B in one process).
+        opts.enable_cpu_mem_arena = False
         if threads:
             opts.intra_op_num_threads = threads
         self.session = ort.InferenceSession(

@@ -83,6 +83,9 @@ class LineRecognizer:
     def __init__(self, model_path: str | Path, threads: int | None = None) -> None:
         self.workers = threads or min(8, os.cpu_count() or 1)
         opts = ort.SessionOptions()
+        # No memory arena: lines all have different widths, so the arena kept
+        # growing with every page; without it memory stays flat (~2% slower).
+        opts.enable_cpu_mem_arena = False
         opts.intra_op_num_threads = 1
         self.session = ort.InferenceSession(
             str(model_path), opts, providers=["CPUExecutionProvider"]
