@@ -37,6 +37,7 @@ import argparse
 import hashlib
 import html
 import json
+import os
 import random
 import re
 import subprocess
@@ -56,7 +57,21 @@ from arabic_ocr import charset
 
 ROOT = Path(__file__).resolve().parent.parent
 REAL_DIR = ROOT / "data" / "real"
-USER_AGENT = "arabic-ocr-testset-builder/0.1 (offline OCR research; evaluation only)"
+
+
+def user_agent() -> str:
+    """Wikimedia's User-Agent policy (https://w.wiki/4wJS) requires automated
+    clients to give a contact (e-mail or web page); without one, requests are
+    refused. The contact comes from the ARABIC_OCR_CONTACT environment variable,
+    so it is never written into the repository."""
+    contact = os.environ.get("ARABIC_OCR_CONTACT", "").strip()
+    if not contact:
+        sys.exit(
+            "Set ARABIC_OCR_CONTACT to an e-mail address or web page first: Wikimedia "
+            "requires a contact in the User-Agent of automated downloads."
+        )
+    return f"arabic-ocr-dataset-builder/0.1 ({contact}; offline OCR research) python-urllib"
+
 
 # --------------------------------------------------------------------------
 # printed: Arabic Wikisource
@@ -108,7 +123,7 @@ def _get(url: str, retries: int = 6) -> bytes:
     asks (Retry-After), or longer each time."""
     for attempt in range(retries):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+            req = urllib.request.Request(url, headers={"User-Agent": user_agent()})
             with urllib.request.urlopen(req, timeout=60) as r:
                 return r.read()
         except urllib.error.HTTPError as e:
