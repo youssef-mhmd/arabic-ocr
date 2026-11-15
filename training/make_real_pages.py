@@ -590,6 +590,93 @@ def _page_html(
     )
 
 
+#: Fonts of modern digital documents (Word, PDFs, the web) for `digital` pages.
+DOC_FONTS = [
+    "Times New Roman", "Arial", "Tahoma", "Segoe UI", "Traditional Arabic",
+    "Simplified Arabic", "Sakkal Majalla", "Calibri",
+]  # fmt: skip
+
+
+def build_digital(lang: str, n_pages: int, seed: int) -> None:
+    """Modern digital document pages (Persian or Urdu): unseen test-split text laid
+    out as a one-page A4 document (title + paragraphs) in a Windows document font,
+    printed to PDF by Edge, then rendered at 300 DPI - like the born-digital law
+    PDFs that make up most of the Arabic printed set. Labels are exact (we wrote the
+    text); pages are scored on their whole text."""
+    import pypdfium2 as pdfium
+
+    from training.corpora import CORPORA_DIR
+    from training.make_dataset import TextPicker
+
+    if not EDGE.exists():
+        sys.exit(f"Microsoft Edge not found at {EDGE} (this set is built on Windows).")
+    picker = TextPicker([{"name": f"wikipedia_{lang}", "weight": 1.0}], "test", CORPORA_DIR)
+    rng = random.Random(seed)
+    out = REAL_DIR / f"pages_digital_{lang}"
+    (out / "images").mkdir(parents=True, exist_ok=True)
+    (out / "labels").mkdir(parents=True, exist_ok=True)
+
+    def words(lo: int, hi: int) -> str:
+        n, got = rng.randint(lo, hi), []
+        while len(got) < n:
+            para = charset.normalize(charset.strip_diacritics(picker.files[0].random_line(rng)))
+            got += [w for w in para.split() if not charset.unsupported_chars(w)]
+        return " ".join(got[:n])
+
+    with tempfile.TemporaryDirectory() as tmp:
+        made = 0
+        while made < n_pages:
+            font, size = rng.choice(DOC_FONTS), rng.choice([11, 12, 13, 14])
+            title = words(3, 8)
+            paras = [words(30, 70) for _ in range(rng.randint(3, 5))]
+            align = rng.choice(["justify", "right"])
+            body = f"<h1>{html.escape(title)}</h1>" + "".join(
+                f"<p>{html.escape(p)}</p>" for p in paras
+            )
+            css = (
+                "@page { size: A4; margin: 2cm; } "
+                f"body {{ font-family: '{font}'; font-size: {size}pt; "
+                f"line-height: {rng.uniform(1.3, 1.8):.2f}; text-align: {align}; }} "
+                "h1 { font-size: 1.5em; text-align: center; } p { margin: 0 0 0.8em 0; }"
+            )
+            page = Path(tmp) / f"d{made}.html"
+            page.write_text(
+                f'<!doctype html><html lang="{lang}" dir="rtl"><head><meta charset="utf-8">'
+                f"<style>{css}</style></head><body>{body}</body></html>",
+                encoding="utf-8",
+            )
+            pdf_path = Path(tmp) / f"d{made}.pdf"
+            _edge(["--no-pdf-header-footer", f"--print-to-pdf={pdf_path}", page.as_uri()])
+            if not pdf_path.exists():
+                continue
+            pdf = pdfium.PdfDocument(str(pdf_path))
+            if len(pdf) != 1:  # text ran onto a second page: try another page
+                pdf.close()
+                continue
+            image = pdf[0].render(scale=300 / 72, grayscale=True).to_numpy().copy()
+            pdf.close()
+            key = f"d{lang}{made:03d}"
+            cv2.imwrite(str(out / "images" / f"{key}.png"), image)
+            label = {
+                "kind": "printed",
+                "style": "naskh",
+                "modern": True,
+                "language": lang,
+                "source": f"digital document ({font} {size}pt)",
+                "font": font,
+                "width": int(image.shape[1]),
+                "height": int(image.shape[0]),
+                "text": "\n".join([title, *paras]),
+                "lines": None,
+            }
+            (out / "labels" / f"{key}.json").write_text(
+                json.dumps(label, ensure_ascii=False, indent=1), encoding="utf-8"
+            )
+            made += 1
+            print(f"  [{made}/{n_pages}] {key} {font} {size}pt", flush=True)
+    print(f"Done -> {out}")
+
+
 def _edge(args: list[str]) -> str:
     cmd = [str(EDGE), "--headless=new", "--disable-gpu", "--hide-scrollbars", *args]
     return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", timeout=120).stdout
@@ -698,6 +785,10 @@ def main(argv: list[str] | None = None) -> int:
     pr.add_argument("-n", type=int, default=60)
     pr.add_argument("--per-book", type=int, default=5)
     pr.add_argument("--seed", type=int, default=11)
+    dg = sub.add_parser("digital", help="modern digital document pages (Persian/Urdu)")
+    dg.add_argument("--lang", choices=["fa", "ur", "ar"], required=True)
+    dg.add_argument("-n", type=int, default=40)
+    dg.add_argument("--seed", type=int, default=41)
     sc = sub.add_parser("screens", help="browser screenshots of web-like pages")
     sc.add_argument("-n", type=int, default=50)
     sc.add_argument("--seed", type=int, default=12)
@@ -713,6 +804,8 @@ def main(argv: list[str] | None = None) -> int:
         build_printed(args.n, args.per_book, args.seed, SITES[args.site])
     elif args.set == "relabel":
         relabel_printed(SITES[args.site])
+    elif args.set == "digital":
+        build_digital(args.lang, args.n, args.seed)
     else:
         build_screens(args.n, args.seed, args.name, not args.mixed, FONT_SETS[args.fonts])
     return 0

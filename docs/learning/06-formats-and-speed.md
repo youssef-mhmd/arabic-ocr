@@ -120,3 +120,11 @@ v6 improved Persian (10.1% → 6.0%) and Urdu (35.6% → 29.1%) but made **Arabi
 One line set got worse: the older OpenITI *dev* lines (4.91% → 5.77%), while its *held-out* sister set improved (2.92% → 2.87%). v6b (int8) is the default model.
 
 Lesson: with automatically matched labels, check the *edges* of each sample, not only the overall match.
+
+## 11. What "printed Persian/Urdu" means
+
+The PRD's Persian/Urdu target (≤ 4%) was measured first on whatever Wikisource offered: verse (Shahnameh, Masnavi), lithographs, and old prints. Looking at the errors showed that much of the gap was not misreading at all:
+- **Old spelling.** Older Persian type often printed گ چ پ without their extra marks (as ک ج ب). Transcribers write modern spelling, so a correct reading of the page counts as wrong. On one classical treatise, 23% of all "errors" were these.
+- **Verse numbers** printed in the margin are not transcribed.
+
+The owner decided (2026-11-15) to measure the target on *modern print*: typeset prose in modern spelling (17 real Persian scan pages: **3.07%**) and modern digital documents (Persian **0.18%**, Urdu **0.27%**, made by printing unseen text to PDF with Windows fonts, like the born-digital law PDFs in the Arabic set). Old prints and verse stay as a stress test. Wikisource had no modern Urdu naskh scans, so Urdu's modern-print number comes from digital documents only.

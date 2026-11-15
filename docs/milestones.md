@@ -107,7 +107,7 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Exit criteria:** every v1 accuracy target in PRD §9 is met. All output formats pass tests on all 3 OSes.
 
-**Status (2026-11-15, end of day):** 10 of 11 items done; open: viewer check of the searchable PDF (owner). Real-page CER (no diacritics, detector-v2 + recognizer-v6b): Arabic printed 1.40% ✅ (≤ 2%), with diacritics 1.50% ✅ (≤ 6%); screenshots, UI fonts 0.85% ✅ (≤ 1%); Persian naskh 6.8% ❌ (≤ 4%; prose books 2.1-4.2%, verse/classical 10-17%); Urdu naskh 33.9% ❌ (one 1920s letterpress book; no other Urdu naskh source on Wikisource). Speed: A4 1.54 s ✅, screenshot 0.60 s (NFR-3 says 0.5 s). CI on 3 OSes: waiting for the GitHub repository.
+**Status (2026-11-15, end of day):** 10 of 11 items done; open: viewer check of the searchable PDF (owner). Accuracy (CER no diacritics, detector-v2 + recognizer-v6b; PRD §9 as clarified by the owner): Arabic printed 1.40% ✅, with diacritics 1.50% ✅; screenshots (UI fonts) 0.85% ✅; Persian modern print 3.07% (scans) / 0.18% (digital) ✅; Urdu modern print 0.27% (digital) ✅. Stress tests: Persian old/verse pages 10-21%, Urdu 1920s book 33.9%, rare screenshot fonts ~10%. Speed: A4 1.54 s ✅, screenshot 0.60 s (NFR-3 0.5 s). CI on 3 OSes: waiting for the GitHub repository (owner).
 
 ---
 

@@ -177,9 +177,11 @@ def iter_synthetic(dataset: Path, split: str, kind: str | None):
                 yield key, img, meta
 
 
-def iter_real(folder: Path):
+def iter_real(folder: Path, only: dict[str, str] | None = None):
     for label in sorted((folder / "labels").glob("*.json")):
         meta = json.loads(label.read_text(encoding="utf-8"))
+        if only and any(str(meta.get(k)).lower() != v.lower() for k, v in only.items()):
+            continue
         image = next((folder / "images").glob(label.stem + ".*"))
         yield label.stem, load_image(image), meta
 
@@ -194,11 +196,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--detector", type=Path)
     parser.add_argument("--recognizer", type=Path)
     parser.add_argument("--out", type=Path, help="write the scores (and per-page) as JSON")
+    parser.add_argument(
+        "--only",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="real sets: only pages whose label has this value, e.g. modern=true",
+    )
     args = parser.parse_args(argv)
 
     ocr = OCR(args.detector, args.recognizer)
+    only = dict(kv.split("=", 1) for kv in args.only)
     pages = (
-        iter_real(args.real) if args.real else iter_synthetic(args.dataset, args.split, args.kind)
+        iter_real(args.real, only)
+        if args.real
+        else iter_synthetic(args.dataset, args.split, args.kind)
     )
     tallies: dict[str, Tally] = defaultdict(Tally)
     per_page = {}

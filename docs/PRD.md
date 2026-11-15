@@ -211,7 +211,7 @@ We generate millions of labeled line images by rendering real Arabic text with r
 | Clean printed text, diacritics ignored | CER ≤ 2% | ≤ 1% |
 | Screenshots / UI text (common interface and document fonts¹) | CER ≤ 1% | ≤ 0.5% |
 | Printed text, diacritics counted | CER ≤ 6% | ≤ 3% |
-| Persian/Urdu printed (Naskh) | CER ≤ 4% | ≤ 2% |
+| Persian/Urdu printed (Naskh, modern print²) | CER ≤ 4% | ≤ 2% |
 | Nastaliq (Urdu style) | not a v1 target | ≤ 8% |
 | Scene text photos (phase 5) | — | CER ≤ 15% |
 | Handwriting (phase 6) | — | CER ≤ 20% |
@@ -219,6 +219,8 @@ We generate millions of labeled line images by rendering real Arabic text with r
 We also report word error rate (WER) and detection precision/recall (IoU ≥ 0.5).
 
 ¹ Decided by the owner on 2026-11-15: the screenshot target is measured on fonts apps, web pages and documents use (Segoe UI, Tahoma, Arial, Calibri, Microsoft Sans Serif, Times New Roman, Simplified Arabic, Traditional Arabic, Sakkal Majalla; test set `data/real/pages_screens_ui`). Calligraphic, print-shop and monospace fonts (Aldhabi, Arabic/Urdu Typesetting, Courier New) are reported separately as a stress test.
+
+² Decided by the owner on 2026-11-15: measured on modern print, i.e. typeset prose in modern spelling (real Persian Wikisource scans tagged `modern`, `data/real/pages_printed_fa --only modern=true`) and modern digital documents (`data/real/pages_digital_fa`, `pages_digital_ur`). Old prints (lithographs, early-20th-century typography, old spelling such as ک for گ) and verse are reported separately as a stress test. No modern Urdu naskh scans were available (Wikisource's only Urdu naskh book is a worn 1920s print), so Urdu modern print is measured on digital documents.
 
 ---
 
