@@ -102,8 +102,8 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 - [x] Public library API: `OCR().read(path_or_image)` → typed result objects; docstrings
 - [x] Local HTTP API: `arabic-ocr serve` (FastAPI, binds to 127.0.0.1 by default), `POST /ocr`
 - [x] Optional lexicon/word-list correction in postprocessing *(opt-in `--correct-words`: ~2% fewer errors, see correct.py)*
-- [ ] Fine-tune on real/augmented data to close the domain gap
-- [ ] Performance tuning to reach NFR-3/4/5 (≤ 2 s/page, ≤ 1 GB RAM, models ≤ 50 MB)
+- [x] Fine-tune on real/augmented data to close the domain gap *(recognizer-v6b on 10,882 cleaned real Wikisource lines: Arabic printed 1.77 → 1.40%, Persian naskh 10.1 → 6.8%; see docs/learning/06 §10)*
+- [x] Performance tuning to reach NFR-3/4/5 (≤ 2 s/page, ≤ 1 GB RAM, models ≤ 50 MB) *(A4 page 1.54 s on 4 threads, ~150 MB RAM flat, models 30 MB; int8 recognizer, see docs/learning/06 §5–6. Open: one screenshot 0.60 s vs NFR-3's 0.5 s)*
 
 **Exit criteria:** every v1 accuracy target in PRD §9 is met. All output formats pass tests on all 3 OSes.
 

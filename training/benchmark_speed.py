@@ -33,7 +33,11 @@ from training.make_pages import read_pages
 
 PAGES = Path("data/datasets/pages_v2/test")
 A4_WIDTH = 2480  # pixels at 300 DPI
-TARGET_SECONDS = 2.0  # PRD NFR-3 (M3 used 3 s)
+#: PRD NFR-3: an A4 page at 300 DPI in <= 2 s; one screenshot in <= 0.5 s.
+TARGET_PAGE = 2.0
+TARGET_SCREENSHOT = 0.5
+#: Inputs up to this many pixels count as screenshots (a 2560x1440 screen is 3.7 MP).
+SCREENSHOT_PIXELS = 4_000_000
 
 
 def synthetic_a4(count: int) -> list[tuple[str, np.ndarray, list[np.ndarray]]]:
@@ -104,8 +108,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{name}  {w}x{h}  {len(best.lines)} lines  {best.seconds:.2f} s  ({steps})")
 
     med = statistics.median(totals)
-    verdict = "PASS" if med <= TARGET_SECONDS else "FAIL"
-    print(f"median {med:.2f} s per page (target <= {TARGET_SECONDS:.0f} s): {verdict}")
+    screenshots = all(img.shape[0] * img.shape[1] <= SCREENSHOT_PIXELS for _, img, _ in pages)
+    target = TARGET_SCREENSHOT if screenshots else TARGET_PAGE
+    verdict = "PASS" if med <= target else "FAIL"
+    kind = "screenshot" if screenshots else "page"
+    print(f"median {med:.2f} s per {kind} (target <= {target:g} s): {verdict}")
     if args.truth_boxes:
         print("note: --truth-boxes skips the detector; real runs will be slower")
     return 0
