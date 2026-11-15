@@ -94,7 +94,7 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Goal:** all v1 inputs/outputs work, and v1 accuracy targets are met.
 
-- [x] **Screenshot accuracy (carried over from M3):** real screenshot pages (common UI/document fonts, 100 pages, `data/real/pages_screens_ui`) **0.91% CER, recall 98.2%** ✅ (detector-v2 + recognizer-v5). Rare fonts (Aldhabi, Typesetting, Courier New) stay a stress test (~10%); small text ≤ 14 px is the weakest part (2.7%). Test: `uv run python -m training.eval_pages --real data/real/pages_screens_ui`
+- [x] **Screenshot accuracy (carried over from M3):** real screenshot pages (common UI/document fonts, 100 pages, `data/real/pages_screens_ui`) **0.85% CER, recall 98.2%** ✅ (detector-v2 + recognizer-v6b). Rare fonts (Aldhabi, Typesetting, Courier New) stay a stress test (~10%); small text ≤ 14 px is the weakest part (2.7%). Test: `uv run python -m training.eval_pages --real data/real/pages_screens_ui`
 - [x] Layout analysis: blocks, multi-column detection (RTL column order), paragraphs, noise removal
 - [x] Input: PNG/JPEG/TIFF (multi-page)/BMP/WebP; PDF via pypdfium2 at 300 DPI; batch folders/globs
 - [x] Exporters: txt, JSON, **searchable PDF** (pikepdf invisible text layer), **hOCR**, **ALTO XML**
@@ -107,7 +107,7 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Exit criteria:** every v1 accuracy target in PRD §9 is met. All output formats pass tests on all 3 OSes.
 
-**Status (2026-11-15):** 7 of 11 items done. Real-page CER (no diacritics): Arabic printed 1.77% ✅ (≤ 2%); screenshots 3.67% ❌ (≤ 1%; common UI fonts already ~≤ 1%); Persian naskh 9.2% ❌ and Urdu naskh 35.6% ❌ (≤ 4%). Speed ~1.9 s per A4 page (A/B), memory ~150 MB, models 26 MB. Blocked on the owner: a contact for Wikimedia's User-Agent policy (real training lines), a GitHub repository (CI on 3 OSes), the Adobe/Preview check of the searchable PDF. See docs/learning/06.
+**Status (2026-11-15, end of day):** 10 of 11 items done; open: viewer check of the searchable PDF (owner). Real-page CER (no diacritics, detector-v2 + recognizer-v6b): Arabic printed 1.40% ✅ (≤ 2%), with diacritics 1.50% ✅ (≤ 6%); screenshots, UI fonts 0.85% ✅ (≤ 1%); Persian naskh 6.8% ❌ (≤ 4%; prose books 2.1-4.2%, verse/classical 10-17%); Urdu naskh 33.9% ❌ (one 1920s letterpress book; no other Urdu naskh source on Wikisource). Speed: A4 1.54 s ✅, screenshot 0.60 s (NFR-3 says 0.5 s). CI on 3 OSes: waiting for the GitHub repository.
 
 ---
 
