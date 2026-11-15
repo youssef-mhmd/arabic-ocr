@@ -1,0 +1,39 @@
+# Sixth recognizer run (M4): fine-tune recognizer_v5 on real scanned lines.
+#
+#   uv run python -m training.make_mix --name mix_v6 --synthetic v5 --synthetic-shards 40 --real real_v1 --real-repeat 4
+#   uv run --group train python -m training.train_recognizer training/configs/recognizer_v6.yaml
+#
+# Outputs go to runs/recognizer_v6/. Interrupt any time; run again to resume.
+#
+# Why: real Persian (9.2%), Urdu and old Arabic scans are far worse than synthetic
+# lines. mix_v6 = real lines from proofread Wikisource scans (training/make_real_lines.py,
+# repeated 4x) + 200k synthetic v5 lines (so print and screen skills are kept).
+# Validation uses real lines only. Ship only if every real test set gets better or
+# stays the same.
+
+name: recognizer_v6
+seed: 1239
+dataset: data/datasets/mix_v6
+init_from: runs/recognizer_v5/best.pt
+
+model:
+  rnn_hidden: 256
+  rnn_layers: 2
+  dropout: 0.2
+
+epochs: 3
+
+max_batch: 128
+width_budget: 65536
+
+optimizer:
+  lr: 0.0003           # gentle: adjust to real scans without forgetting
+  weight_decay: 0.01
+  warmup_samples: 50000
+  min_lr_fraction: 0.02
+  grad_clip: 5.0
+
+amp: bf16
+num_workers: 8
+log_every_steps: 100
+val_every_samples: 100000

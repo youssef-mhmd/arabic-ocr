@@ -12,8 +12,7 @@ def test_wikitext_keeps_lines_and_template_text():
     )
     assert wikitext_to_text(wikitext).splitlines() == [
         "( ٢٢٤ )",
-        "الملك السعيد",
-        "قال الشيخ",
+        "الملك السعيد قال الشيخ",  # bold text inside a line stays in that line
         "ليل يعارضه الزمان ما لي به إلا الأسى",
     ]
 

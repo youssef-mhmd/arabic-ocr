@@ -138,7 +138,7 @@ def build(site_name: str, n_pages: int, seed: int) -> None:
             continue
         done.add(title)
         try:
-            text = W.wikitext_to_text(W.raw_wikitext(title, site))
+            text = W.wikitext_to_text(W.raw_wikitext(title, site), drop_footnotes=True)
             if not text or len(text) < 200:
                 continue
             got = W.download_scan(title, site)

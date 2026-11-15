@@ -106,9 +106,24 @@ TEXT_TEMPLATES = {
     "أبيات",  # verse; its two half-lines are separated by a double backslash
     # Persian / Urdu Wikisource
     "سرصفحه", "وسط‌چین", "زیرخط", "بزرگتر", "بزرگتر۱", "بزرگتر۲", "توخالی", "big",
+    "سصم", "ود", "و", "ب", "کوچکتر", "اندازه قلم", "کذا",
 }  # fmt: skip
-#: Templates that only draw rules or spacing: dropped.
-BLANK_TEMPLATES = {"rule", "dhr", "ص", "سطر", "فراغات", "nop", "خط‌کش", "خط کش"}
+#: Templates that only draw rules or spacing, or mark structure: dropped.
+BLANK_TEMPLATES = {
+    "rule", "dhr", "ص", "سطر", "فراغات", "nop", "خط‌کش", "خط کش",
+    # Persian: rules, footnote dividers, spacing, poem/paragraph markers
+    "خطکش", "خطکش-پانویس-کوچک", "پانویس-کوچک", "فاصله", "شعر", "پایان شعر", "بند", "ته",
+}  # fmt: skip
+#: Text templates that form lines of their own (headings, running heads, verses).
+BLOCK_TEMPLATES = {
+    "وسط", "center", "c", "يمين", "يسار", "rh", "runningheader", "رأس", "رص", "أبيات",
+    "سرصفحه", "وسط‌چین", "سصم", "ود", "و", "ب",
+}  # fmt: skip
+#: Templates whose first argument is the printed text and the rest an editor's
+#: note: {{کذا|بر|به خط الحاقی}} ("sic") prints only "بر".
+FIRST_ARG_TEMPLATES = {"کذا"}
+#: Arguments that are sizes, not text: {{اندازه قلم|200%|...}}.
+_SIZE_ARG = re.compile(r"^\d+(\.\d+)?(%|em|px|pt)$")
 #: Running headers keep their named values too, e.g. {{رص|وسط=( ٢٢٤ )}}.
 NAMED_TEXT_TEMPLATES = {"رص", "rh", "runningheader", "رأس", "سرصفحه"}
 #: Footnotes, tables, pictures, formulas: the page is skipped (the scan's footnote
@@ -178,13 +193,28 @@ def _template_text(match: re.Match) -> str:
             if name not in NAMED_TEXT_TEMPLATES:
                 continue  # a setting such as م=س, not text
             p = p.partition("=")[2].strip()
-        if p:
+        if p and not _SIZE_ARG.match(p):
             args.append(re.sub(r"\\+", " ", p))  # verse half-line separator
-    return "\n" + " ".join(args) + "\n" if args else ""
+    if name in FIRST_ARG_TEMPLATES:
+        args = args[:1]
+    if not args:
+        return ""
+    # Headings, running heads and verses are lines of their own; styling inside a
+    # line (bold, sic, font size) must not break the line.
+    sep = "\n" if name in BLOCK_TEMPLATES else ""
+    return sep + " ".join(args) + sep
 
 
-def wikitext_to_text(wikitext: str) -> str | None:
-    """Plain text of a proofread page, or None if the page is not simple enough."""
+def wikitext_to_text(wikitext: str, drop_footnotes: bool = False) -> str | None:
+    """Plain text of a proofread page, or None if the page is not simple enough.
+
+    `drop_footnotes`: remove <ref> footnotes instead of rejecting the page. Right
+    for training lines (lines are matched one by one; footnote lines just don't
+    match), wrong for test pages (the scan's footnote area would be missing).
+    """
+    if drop_footnotes:
+        wikitext = re.sub(r"<ref[^>]*/>|<ref[^>]*>.*?</ref>", "", wikitext, flags=re.S | re.I)
+        wikitext = re.sub(r"<references[^>]*/>|\{\{(?:پانویس|reflist)[^{}]*\}\}", "", wikitext)
     low = wikitext.lower()
     if any(m in low for m in SKIP_MARKERS):
         return None
@@ -192,7 +222,7 @@ def wikitext_to_text(wikitext: str) -> str | None:
     text = re.sub(r"<section[^>]*/?>", "", text)  # labelled-section markers
     text = re.sub(r"</?noinclude>", "\n", text)
     text = re.sub(r"<br\s*/?>", "\n", text)
-    text = re.sub(r"</?(poem|div|span|p|small|big|b|i|u|center)[^>]*>", "", text)
+    text = re.sub(r"</?(poem|div|span|p|small|big|b|i|u|center|sup|sub)[^>]*>", "", text)
     if "<" in text and re.search(r"<[a-zA-Z/]", text):
         return None  # other markup we don't understand
     try:
