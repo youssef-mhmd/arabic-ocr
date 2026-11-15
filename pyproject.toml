@@ -17,15 +17,24 @@ dependencies = [
     "pillow>=13.0.0",
     "typer>=0.28.0",
     "pypdfium2>=5.15.2",
-    "pikepdf>=10.18.1",
+    # pikepdf 10.14+ needs macOS 15 on Apple Silicon; 10.13 keeps macOS 14 working.
+    "pikepdf>=10.18.1 ; sys_platform != 'darwin'",
+    "pikepdf>=10.13.0,<10.14 ; sys_platform == 'darwin'",
     "fonttools>=4.68.0",
     "fastapi>=0.163.0",
     "uvicorn>=0.54.0",
     "python-multipart>=0.0.33",
 ]
 
+[project.optional-dependencies]
+# The desktop app: `uv sync --extra gui`, or `pip install "arabic-ocr[gui]"`.
+gui = ["pyside6-essentials>=6.12.0"]
+
 [project.scripts]
 arabic-ocr = "arabic_ocr.cli:app"
+
+[project.gui-scripts]
+arabic-ocr-gui = "arabic_ocr.gui.app:main"
 
 [build-system]
 requires = ["uv_build>=0.13.7,<0.14.0"]
@@ -37,8 +46,9 @@ dev = [
     "pytest>=9.2.0",
     "ruff>=0.17.4",
 ]
-gui = [
-    "pyside6>=6.12.0",
+# Building the installers (PyInstaller). See packaging/README.md.
+build = [
+    "pyinstaller>=6.17.0",
 ]
 # Synthetic data generation (text shaping, font rendering, config files). Small and
 # available on every platform, so it is installed by default and tested in CI.

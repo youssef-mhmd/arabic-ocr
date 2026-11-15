@@ -24,6 +24,7 @@ ONNX Runtime only: the shipped runtime never imports torch.
 from __future__ import annotations
 
 import os
+import sys
 import time
 import unicodedata
 from dataclasses import dataclass, field
@@ -43,9 +44,17 @@ from arabic_ocr.preprocess import preprocess
 from arabic_ocr.recognize.ctc import Decoded
 from arabic_ocr.recognize.recognizer import LineRecognizer
 
-#: Where models are looked for: $ARABIC_OCR_MODELS, else the repo's models/ folder.
-_REPO_MODELS = Path(__file__).resolve().parents[2] / "models"
-MODELS_DIR = Path(os.environ.get("ARABIC_OCR_MODELS", _REPO_MODELS))
+
+def _bundled_models() -> Path:
+    """The models/ folder: inside the installed app (PyInstaller puts bundled files
+    under sys._MEIPASS), or the repo's models/ folder when run from source."""
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS) / "models"
+    return Path(__file__).resolve().parents[2] / "models"
+
+
+#: Where models are looked for: $ARABIC_OCR_MODELS, else the bundled/repo models/.
+MODELS_DIR = Path(os.environ.get("ARABIC_OCR_MODELS", _bundled_models()))
 DETECTOR = "detector-v2.onnx"
 #: Convolutions in int8 (training/quantize.py): ~1.8x faster on CPU, same CER.
 RECOGNIZER = "recognizer-v6b-int8.onnx"

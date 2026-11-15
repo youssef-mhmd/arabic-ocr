@@ -1,0 +1,214 @@
+name: Release
+
+# Builds the installers on all three systems, tests each one on a clean machine,
+# and (for a version tag like v1.0.0) publishes them as a GitHub release.
+#
+#   git tag v1.0.0 && git push origin v1.0.0     -> build, test, publish
+#   Actions tab > Release > Run workflow          -> build and test only
+#   a push that changes the app or its packaging  -> build and test only
+#
+# If a step fails, the end of its log is attached to the run as an error
+# annotation, so it can be read without signing in.
+
+on:
+  push:
+    tags: ["v*"]
+    branches: ["**"]
+    paths:
+      - "installers/**"
+      - "src/arabic_ocr/gui/**"
+      - ".github/workflows/release.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows
+            os: windows-latest
+          - name: macos
+            os: macos-15 # Apple Silicon
+          - name: linux
+            os: ubuntu-latest
+            # Built on the oldest supported Ubuntu, so it runs on 22.04 and newer
+            container: ubuntu:22.04
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+      - name: Linux build tools
+        if: matrix.name == 'linux'
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git binutils dpkg-dev \
+            libegl1 libgl1 libfontconfig1 libxkbcommon0 libdbus-1-3 libglib2.0-0
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      - name: Inno Setup
+        if: matrix.name == 'windows'
+        run: choco install innosetup -y --no-progress
+      # Only what the app needs (runtime + gui) and PyInstaller: nothing else gets bundled.
+      - run: uv sync --locked --no-default-groups --extra gui --group build
+      - name: Build, self-test and package
+        shell: bash
+        run: |
+          set -o pipefail
+          uv run --no-sync python -m installers.build 2>&1 | tee build.log
+      - uses: actions/upload-artifact@v5
+        with:
+          name: installer-${{ matrix.name }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.deb
+          if-no-files-found: error
+      - name: Show the log on failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "::error title=build log (end)::$(tail -n 80 build.log 2>/dev/null | awk '{gsub(/%/,"%25"); gsub(/\r/,""); printf "%s%%0A", $0}')"
+
+  # ---------------------------------------------------------------- clean machines
+  test-linux:
+    name: clean test (${{ matrix.image }})
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["ubuntu:22.04", "ubuntu:24.04"]
+    # A fresh Ubuntu: no Python, no developer tools.
+    container: ${{ matrix.image }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: installer-linux
+      - name: Install the .deb (apt pulls in the system libraries it lists)
+        run: |
+          apt-get update
+          ! command -v python3 && echo "No Python on this machine (good)."
+          DEBIAN_FRONTEND=noninteractive apt-get install -y ./arabic-ocr_*_amd64.deb xvfb xauth
+      - name: Run the installed app (real X11 display via Xvfb, no offscreen tricks)
+        run: |
+          set -o pipefail
+          {
+            arabic-ocr --version
+            xvfb-run -a arabic-ocr-gui --self-test report.txt; code=$?
+            cat report.txt
+            exit $code
+          } 2>&1 | tee test.log
+      - name: Show the log on failure
+        if: failure()
+        run: |
+          echo "::error title=test log (end)::$(tail -n 60 test.log 2>/dev/null | awk '{gsub(/%/,"%25"); gsub(/\r/,""); printf "%s%%0A", $0}')"
+
+  test-windows:
+    name: clean test (windows)
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: installer-windows
+      - name: Install, run, uninstall (Python removed from PATH)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          # Hide every Python on this runner: the app must bring its own.
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'python|hostedtoolcache' }) -join ';'
+          if (Get-Command python -ErrorAction SilentlyContinue) { Write-Output "note: a python stub is still on PATH" }
+          $setup = (Get-ChildItem arabic-ocr-*-setup.exe).FullName
+          $p = Start-Process $setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/CURRENTUSER','/TASKS=addtopath','/LOG=setup.log' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content setup.log -Tail 40; throw "setup failed: $($p.ExitCode)" }
+          $app = "$env:LOCALAPPDATA\Programs\Arabic OCR"
+          Get-ChildItem $app | Select-Object Name
+          & "$app\arabic-ocr.exe" --version
+          if ($LASTEXITCODE -ne 0) { throw "arabic-ocr --version failed" }
+          # The GUI program has no console: wait for it and read its report file.
+          $p = Start-Process "$app\arabic-ocr-gui.exe" -ArgumentList '--self-test', "$PWD\report.txt" -Wait -PassThru
+          Get-Content report.txt -Encoding utf8
+          if ($p.ExitCode -ne 0) { throw "self-test failed: $($p.ExitCode)" }
+          $path = [Environment]::GetEnvironmentVariable('Path', 'User')
+          if ($path -notlike "*Arabic OCR*") { throw "not added to PATH" }
+          $p = Start-Process "$app\unins000.exe" -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES' -Wait -PassThru
+          Start-Sleep -Seconds 3
+          if (Test-Path "$app\arabic-ocr-gui.exe") { throw "uninstall left the app behind" }
+          Write-Output "Installed, ran, uninstalled: OK"
+      - name: Show the log on failure
+        if: failure()
+        shell: pwsh
+        run: |
+          $t = @()
+          foreach ($f in 'report.txt', 'setup.log') { if (Test-Path $f) { $t += Get-Content $f -Tail 40 } }
+          $msg = ($t -join '%0A').Replace("`r", '')
+          Write-Output "::error title=test log (end)::$msg"
+
+  test-macos:
+    name: clean test (${{ matrix.os }})
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: installer-macos
+      - name: Install from the .dmg and run
+        run: |
+          set -o pipefail
+          {
+            sw_vers
+            hdiutil attach arabic-ocr-*-macos-arm64.dmg -mountpoint /Volumes/ArabicOCR -nobrowse
+            cp -R "/Volumes/ArabicOCR/Arabic OCR.app" /Applications/
+            hdiutil detach /Volumes/ArabicOCR
+            APP="/Applications/Arabic OCR.app"
+            codesign --verify --deep "$APP" && echo "signature: OK (ad-hoc)"
+            env -i HOME="$HOME" PATH=/usr/bin:/bin "$APP/Contents/MacOS/arabic-ocr" --version
+            env -i HOME="$HOME" PATH=/usr/bin:/bin "$APP/Contents/MacOS/arabic-ocr-gui" --self-test report.txt; code=$?
+            cat report.txt
+            exit $code
+          } 2>&1 | tee test.log
+      - name: Show the log on failure
+        if: failure()
+        run: |
+          echo "::error title=test log (end)::$(tail -n 60 test.log 2>/dev/null | awk '{gsub(/%/,"%25"); gsub(/\r/,""); printf "%s%%0A", $0}')"
+
+  # ----------------------------------------------------------------------- publish
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test-linux, test-windows, test-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          path: assets
+          merge-multiple: true
+      - name: Models and checksums
+        run: |
+          cp models/detector-v2.onnx models/recognizer-v6b-int8.onnx assets/
+          cd assets
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" assets/* \
+            --title "arabic-ocr ${GITHUB_REF_NAME#v}" \
+            --notes-file docs/release-notes.md

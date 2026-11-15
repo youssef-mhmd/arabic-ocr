@@ -12,9 +12,12 @@ This is the runtime package. It must never import torch; trained models are
 shipped as ONNX files and run with ONNX Runtime.
 """
 
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 
-__version__ = version("arabic-ocr")
+try:
+    __version__ = version("arabic-ocr")
+except PackageNotFoundError:  # a build that lost the package metadata
+    __version__ = "0+unknown"
 
 __all__ = ["OCR", "Block", "Document", "Line", "Page", "Word", "__version__"]
 

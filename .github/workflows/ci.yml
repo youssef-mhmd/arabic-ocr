@@ -25,8 +25,11 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      # Installs runtime + dev + data deps (no torch, no GUI), exactly as pinned in uv.lock.
-      - run: uv sync --locked
+      # Qt needs a few system libraries on Linux (the tests use its "offscreen" mode).
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3
+      # Installs runtime + GUI + dev + data deps (no torch), exactly as pinned in uv.lock.
+      - run: uv sync --locked --extra gui
       # Two fonts for the renderer tests (fonts are never committed to git).
       - run: uv run python -m training.download_fonts --only notonaskharabic,vazirmatn
       - run: uv run pytest

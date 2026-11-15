@@ -266,8 +266,45 @@ def image_dpi(path: str | Path, default: float = 300) -> float:
 
 def ocr_to_pdf(ocr, source: str | Path, out: str | Path, dpi: int = 300, **options):
     """OCR a file into a searchable PDF, one page at a time. Returns the Document."""
-    from arabic_ocr.inputs import PDF_SUFFIXES, load_pages
     from arabic_ocr.pipeline import Document
+
+    pages = []
+
+    def read(image: np.ndarray) -> Page:
+        page = ocr.read_image(image, **options)
+        pages.append(page)
+        return page
+
+    _write(source, read, out, dpi)
+    return Document(pages, Path(source).name)
+
+
+def pages_to_pdf(
+    source: str | Path | None,
+    pages: list[Page],
+    out: str | Path,
+    dpi: int = 300,
+    images: list[np.ndarray] | None = None,
+) -> None:
+    """Write a searchable PDF from results you already have (no OCR is run).
+
+    `pages` must be the OCR of `source` read at `dpi` (one per page, in order), or,
+    with `images` instead of a source, of those images (e.g. a pasted screenshot).
+    Used by the desktop app, where the user may have corrected the text first.
+    """
+    if images is not None:
+        pdf = SearchablePdf()
+        for image, page in zip(images, pages, strict=True):
+            pdf.add_page(image, page, dpi=dpi, jpeg_quality=None)
+        pdf.save(out)
+        return
+    it = iter(pages)
+    _write(source, lambda _image: next(it), out, dpi)
+
+
+def _write(source: str | Path, page_for, out: str | Path, dpi: int) -> None:
+    """Go through the pages of `source`; `page_for(image)` gives each one's result."""
+    from arabic_ocr.inputs import PDF_SUFFIXES, load_pages
 
     source = Path(source)
     suffix = source.suffix.lower()
@@ -275,16 +312,13 @@ def ocr_to_pdf(ocr, source: str | Path, out: str | Path, dpi: int = 300, **optio
     quality = None if suffix in LOSSLESS_SUFFIXES else 85
     pdf = SearchablePdf()
     original = pikepdf.open(source) if suffix in PDF_SUFFIXES else None
-    pages = []
     try:
         for i, image in enumerate(load_pages(source, dpi)):
-            page = ocr.read_image(image, **options)
+            page = page_for(image)
             # PDF input: keep the original page, add only the text layer.
             if original is None or not pdf.add_text_to_page(original.pages[i], page, dpi):
                 pdf.add_page(image, page, dpi=page_dpi, jpeg_quality=quality)
-            pages.append(page)
         pdf.save(out)
     finally:
         if original is not None:
             original.close()
-    return Document(pages, source.name)
