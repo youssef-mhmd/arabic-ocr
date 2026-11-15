@@ -32,5 +32,15 @@ jobs:
       - run: uv sync --locked --extra gui
       # Two fonts for the renderer tests (fonts are never committed to git).
       - run: uv run python -m training.download_fonts --only notonaskharabic,vazirmatn
-      - run: uv run pytest
+      - name: Tests
+        shell: bash
+        run: |
+          set -o pipefail
+          uv run pytest -v 2>&1 | tee pytest.log
+      # Failures are attached as an annotation, readable without signing in.
+      - name: Show the end of the test log on failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "::error title=pytest log (end)::$(tail -n 70 pytest.log 2>/dev/null | awk '{gsub(/%/,"%25"); gsub(/\r/,""); printf "%s%%0A", $0}')"
       - run: uv run arabic-ocr --version
