@@ -58,6 +58,12 @@ def make_page() -> Page:
     )
 
 
+def test_no_lambda_slots():
+    """`x.connect(lambda: self...)` makes a deleted window crash the app on exit."""
+    for path in (ROOT / "src" / "arabic_ocr" / "gui").glob("*.py"):
+        assert ".connect(lambda" not in path.read_text(encoding="utf-8"), path.name
+
+
 # ----------------------------------------------------------------- translations
 def test_every_text_has_both_languages_with_the_same_placeholders():
     fields = string.Formatter()

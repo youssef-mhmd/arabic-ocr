@@ -74,7 +74,7 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          echo "::error title=build log (end)::$(tail -n 80 build.log 2>/dev/null | awk '{gsub(/%/,"%25"); gsub(/\r/,""); printf "%s%%0A", $0}')"
+          echo "::error title=build log (end)::$(grep -v ' INFO: ' build.log 2>/dev/null | tail -n 60 | awk '{gsub(/%/,"%25"); gsub(/\r/,""); printf "%s%%0A", $0}')"
 
   # ---------------------------------------------------------------- clean machines
   test-linux:

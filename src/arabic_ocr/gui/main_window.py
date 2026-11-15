@@ -9,6 +9,10 @@
 Files are read in the background (worker.py) in the order they were added. Click
 a file to see its result. Click a line box to jump to its text, or put the cursor
 on a text line to see its box. Text edits are kept and used by every export.
+
+Signals are connected to methods, never to lambdas that use `self`: such a
+lambda keeps the window alive inside Qt, and a deleted window then crashes the
+app when it quits (tests/test_gui.py checks this).
 """
 
 from __future__ import annotations
@@ -183,10 +187,10 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.view)
         self.btn_prev = QToolButton()
         self.btn_prev.setIcon(icon(P.SP_ArrowBack))
-        self.btn_prev.clicked.connect(lambda: self.show_page(self._page - 1))
+        self.btn_prev.clicked.connect(self.prev_page)
         self.btn_next = QToolButton()
         self.btn_next.setIcon(icon(P.SP_ArrowForward))
-        self.btn_next.clicked.connect(lambda: self.show_page(self._page + 1))
+        self.btn_next.clicked.connect(self.next_page)
         self.page_label = QLabel()
         self.btn_fit = QToolButton()
         self.btn_fit.clicked.connect(self.view.fit)
@@ -547,6 +551,12 @@ class MainWindow(QMainWindow):
             self.text.setExtraSelections([])
             self._updating_text = False
             self._update_nav()
+
+    def prev_page(self) -> None:
+        self.show_page(self._page - 1)
+
+    def next_page(self) -> None:
+        self.show_page(self._page + 1)
 
     def _update_nav(self) -> None:
         entry = self.current()

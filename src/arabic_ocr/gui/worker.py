@@ -124,6 +124,13 @@ def start_worker() -> tuple[Worker, QThread]:
     return worker, thread
 
 
-def stop_worker(worker: Worker, thread: QThread, wait_ms: int = 10_000) -> None:
-    thread.quit()  # stops after the job that is running now
+def stop_worker(worker: Worker, thread: QThread, wait_ms: int = 30_000) -> None:
+    """Stop the thread (after the page being read now) and free the models.
+
+    The models (ONNX Runtime sessions) are released here, while everything is
+    still running normally: left until Python shuts down, they can be freed in
+    the wrong order and crash the process on exit.
+    """
+    thread.quit()
     thread.wait(wait_ms)
+    worker._ocr = None

@@ -236,6 +236,34 @@ def package_linux() -> Path:
     return out
 
 
+def _folder() -> Path:
+    return DIST / ("Arabic OCR.app" if sys.platform == "darwin" else "arabic-ocr")
+
+
+def _folder_mb() -> float:
+    return sum(f.stat().st_size for f in _folder().rglob("*") if f.is_file()) / 1e6
+
+
+def report_size(top: int = 20) -> None:
+    """Print the app folder's size and its largest files (to see what to trim)."""
+    files = sorted(
+        (f for f in _folder().rglob("*") if f.is_file() and not f.is_symlink()),
+        key=lambda f: f.stat().st_size,
+        reverse=True,
+    )
+    print(f"App folder: {_folder_mb():.0f} MB. Largest files:")
+    lines = [f"{f.stat().st_size / 1e6:7.1f} MB  {f.relative_to(_folder())}" for f in files[:top]]
+    print(*lines, sep="\n")
+    notice(f"app folder {_folder_mb():.0f} MB", lines)
+
+
+def notice(title: str, lines: list[str]) -> None:
+    """On GitHub Actions: show this on the run's summary page as a notice."""
+    if os.environ.get("GITHUB_ACTIONS"):
+        body = "%0A".join(line.replace("%", "%25") for line in lines)
+        print(f"::notice title={sys.platform} {title}::{body}", flush=True)
+
+
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -255,8 +283,7 @@ def main() -> None:
     print(f"arabic-ocr {VERSION} on {sys.platform} {platform.machine()}")
     if not args.no_build:
         pyinstaller()
-    size = sum(f.stat().st_size for f in app_dir().parent.rglob("*") if f.is_file())
-    print(f"App folder: {size / 1e6:.0f} MB")
+    report_size()
     if not args.no_test:
         self_test()
     if args.no_package:
@@ -265,6 +292,7 @@ def main() -> None:
     mb = package.stat().st_size / 1e6
     print(f"Installer: {package.name}, {mb:.0f} MB (limit {MAX_MB} MB)")
     print(f"SHA-256: {sha256(package)}")
+    notice(f"{package.name}: {mb:.0f} MB", [f"app folder {_folder_mb():.0f} MB"])
     if mb > MAX_MB:
         raise SystemExit(f"Installer is {mb:.0f} MB, over the {MAX_MB} MB limit (PRD NFR-6)")
 
