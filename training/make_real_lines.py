@@ -178,6 +178,44 @@ def _flush(out_dir: Path, site_name: str, lines: dict, done: set, done_path: Pat
     done_path.write_text(json.dumps(sorted(done), ensure_ascii=False), encoding="utf-8")
 
 
+def clean(src: Path, dst: Path, model: Path, max_cer: float = 0.20) -> None:
+    """Copy only lines whose *ends* clearly match their label.
+
+    A printed line and a transcription line can match at 30% CER even when the
+    transcriber broke the line a word earlier or later than the print; such a pair
+    teaches the model to invent or drop text at line ends (recognizer-v6 did: real
+    Arabic pages 1.77% -> 3.41% CER). Keep a line only if `model` reads it within
+    `max_cer` of its label AND its first and last words agree (edit distance <= 1).
+    Measured on real_v1: 41% of lines failed the end check.
+    """
+    from arabic_ocr.recognize.recognizer import LineRecognizer
+    from training.dataset import read_shard
+
+    rec = LineRecognizer(model)
+    kept = total = 0
+    for shard in sorted(src.glob("*/*/shard-*.tar")):
+        site, split = shard.parent.parent.name, shard.parent.name
+        samples = list(read_shard(shard))
+        decoded = rec.recognize_batch([s.image for s in samples])
+        good = []
+        for s, d in zip(samples, decoded, strict=True):
+            ref, hyp = _norm(s.label), _norm(d.text)
+            rw, hw = ref.split(), hyp.split()
+            ends = bool(rw and hw) and all(
+                fast_edit_distance(a, b) <= 1 for a, b in ((rw[0], hw[0]), (rw[-1], hw[-1]))
+            )
+            if ends and fast_edit_distance(ref, hyp) <= max_cer * len(ref):
+                good.append(s)
+        total += len(samples)
+        kept += len(good)
+        if good:
+            (dst / site / split).mkdir(parents=True, exist_ok=True)
+            with ShardWriter(dst / site / split / shard.name) as w:
+                for s in good:
+                    w.write(s.key, s.image, s.label, s.meta)
+    print(f"kept {kept} of {total} lines ({kept / max(total, 1):.0%}) -> {dst}")
+
+
 def finish() -> None:
     """Count the lines per site and split, and write the dataset manifest."""
     from training.dataset import read_shard
@@ -196,9 +234,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pages", type=int, default=500)
     parser.add_argument("--seed", type=int, default=21)
     parser.add_argument("--finish", action="store_true", help="count lines per site/split")
+    parser.add_argument("--clean", type=Path, help="keep only clearly matching lines; model path")
+    parser.add_argument("--out", default="real_v1_clean", help="--clean output dataset name")
     args = parser.parse_args(argv)
     if args.finish:
         finish()
+        return 0
+    if args.clean:
+        clean(OUT, OUT.parent / args.out, args.clean)
         return 0
     if not args.site:
         parser.error("--site is required")
