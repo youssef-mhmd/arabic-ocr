@@ -32,6 +32,7 @@ datas = [
     (str(GUI / "sample.txt"), "arabic_ocr/gui"),
     (str(GUI / "icon.png"), "arabic_ocr/gui"),
     (str(ROOT / "LICENSE"), "."),
+    (str(ROOT / "NOTICE"), "."),
     *copy_metadata("arabic-ocr"),  # for arabic_ocr.__version__
 ]
 
@@ -44,10 +45,35 @@ excludes = [
 #: Large files the app never uses: OpenCV's video codecs (it only reads images),
 #: and Qt's software OpenGL (the app draws with plain widgets, not OpenGL).
 UNUSED = ("opencv_videoio_ffmpeg", "opengl32sw")
+#: Qt's GTK theme plugin (Linux) would pull in GTK 3 and ~40 system libraries
+#: (systemd, Kerberos, cairo...). Without it Qt uses its own look, and the
+#: system's libraries stay the system's.
+UNUSED_PLUGINS = ("libqgtk3",)
+
+
+
+
+def system_lib(entry) -> bool:
+    """Linux: a library PyInstaller copied from the build machine's system folders.
+    These are left out; the .deb lists the packages that provide them instead
+    (build.py finds them with ldd), so apt installs the user's own versions."""
+    dest, src, _kind = entry
+    return (
+        sys.platform.startswith("linux")
+        and len(Path(dest).parts) == 1  # top level of the bundle
+        and str(src).startswith(("/usr/lib", "/lib"))
+        and not Path(dest).name.startswith("libpython")
+    )
 
 
 def trim(analysis):
-    analysis.binaries = [b for b in analysis.binaries if not Path(b[0]).name.startswith(UNUSED)]
+    def keep(entry):
+        name = Path(entry[0]).name
+        if system_lib(entry):
+            return False
+        return not name.startswith(UNUSED) and not name.startswith(UNUSED_PLUGINS)
+
+    analysis.binaries = [b for b in analysis.binaries if keep(b)]
 
 gui = Analysis(  # noqa: F821
     [str(ROOT / "installers" / "entry_gui.py")],

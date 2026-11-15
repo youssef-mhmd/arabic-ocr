@@ -46,7 +46,7 @@ dev = [
     "pytest>=9.2.0",
     "ruff>=0.17.4",
 ]
-# Building the installers (PyInstaller). See packaging/README.md.
+# Building the installers (PyInstaller). See installers/README.md.
 build = [
     "pyinstaller>=6.17.0",
 ]

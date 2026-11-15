@@ -60,7 +60,7 @@ Because the owner is new to machine learning, the project is built in small, tes
 | CLI | **Typer** | Simple, auto-generated help |
 | Local HTTP API | **FastAPI** + **uvicorn** | Simple, typed, auto docs |
 | Desktop GUI | **PySide6 (Qt 6)** | Native look on all 3 OSes, good right-to-left text support, LGPL |
-| Packaging | **PyInstaller**, built by **GitHub Actions** on each OS | One-click installers: `.exe`/`.msi`, `.dmg`, `.AppImage`/`.deb` |
+| Packaging | **PyInstaller**, built by **GitHub Actions** on each OS | One-click installers: `.exe` (Inno Setup), `.dmg`, `.deb` |
 | Tests / lint | **pytest**, **ruff** | Standard |
 
 **Python version and platform notes (decided 2026-11-09, M0):**
@@ -85,7 +85,7 @@ They would make a slightly smaller, faster app. But training must happen in Pyth
 ### To **use** the finished tool (end users)
 - **Works on any normal computer with no GPU:**
   - Windows 10/11 (64-bit)
-  - macOS 12+ (Intel and Apple Silicon)
+  - macOS 14+ on Apple Silicon (see the note below)
   - Linux (Ubuntu 22.04+ or equivalent, x86-64; ARM64 is a stretch goal)
 - Minimum: 4 GB RAM and a dual-core CPU. Recommended: 8 GB RAM.
 - Optional GPU acceleration (DirectML on Windows, CoreML on Mac, CUDA on NVIDIA) is a stretch goal.
@@ -195,7 +195,7 @@ We generate millions of labeled line images by rendering real Arabic text with r
 
 | ID | Requirement | Target |
 |---|---|---|
-| NFR-1 | Platforms | Windows 10+, macOS 12+ (Intel + Apple Silicon), Ubuntu 22.04+ |
+| NFR-1 | Platforms | Windows 10+ (x64), macOS 14+ (Apple Silicon)³, Ubuntu 22.04+ (x64) |
 | NFR-2 | Offline | 100% offline, no telemetry |
 | NFR-3 | Speed (CPU, 4 cores) | A4 page at 300 DPI in **≤ 2 s**; one screenshot in **≤ 0.5 s** |
 | NFR-4 | Memory | **≤ 1 GB** RAM while processing one page |
@@ -222,6 +222,8 @@ We also report word error rate (WER) and detection precision/recall (IoU ≥ 0.5
 
 ² Decided by the owner on 2026-11-15: measured on modern print, i.e. typeset prose in modern spelling (real Persian Wikisource scans tagged `modern`, `data/real/pages_printed_fa --only modern=true`) and modern digital documents (`data/real/pages_digital_fa`, `pages_digital_ur`). Old prints (lithographs, early-20th-century typography, old spelling such as ک for گ) and verse are reported separately as a stress test. No modern Urdu naskh scans were available (Wikisource's only Urdu naskh book is a worn 1920s print), so Urdu modern print is measured on digital documents.
 
+
+³ Decided 2026-11-15 (M5). **Intel Macs are not supported** (owner's decision): ONNX Runtime publishes no Intel Mac builds after 1.23, and pikepdf none after 10.13. **macOS 14 (Sonoma) is the minimum**: the current PySide6 (Qt 6.12), ONNX Runtime and NumPy builds for Apple Silicon need macOS 14, so macOS 12/13 would mean staying on old versions of all of them. pikepdf is held at 10.13 on macOS because 10.14+ needs macOS 15. GitHub retired its macOS 14 test machines on 2026-11-02, so release builds are tested on macOS 15 and 26.
 ---
 
 ## 10. Roadmap
@@ -243,7 +245,7 @@ We also report word error rate (WER) and detection precision/recall (IoU ≥ 0.5
 ## 11. Licensing (open source)
 - Code: **Apache-2.0** (permissive, includes a patent grant).
 - Fonts used for training: OFL/Apache. The fonts are not shipped in the app, so their licenses only matter for training.
-- Shipped model weights: trained only on redistributable data (§7.2); released under Apache-2.0 or CC BY-SA 4.0, depending on the training text licenses.
+- Shipped model weights: trained only on redistributable data (§7.2); released under **CC BY-SA 4.0** (decided 2026-11-15 for v1.0: the training text is CC BY-SA Wikipedia/Wikisource), with attribution in `NOTICE`.
 - Dependencies: all must be permissive or LGPL (PySide6 is LGPL, which is fine because we link to it dynamically).
 
 ---
@@ -304,4 +306,4 @@ arabic-ocr/
 1. ~~Final project name~~: decided, **arabic-ocr** (Python import name `arabic_ocr`).
 2. ~~**Training hardware**~~: decided 2026-11-09 (M2). Train **locally** on the owner's laptop: NVIDIA RTX 5060 Laptop GPU (8 GB, Blackwell), Ryzen 7 (16 threads), 31 GB RAM. It is likely faster than free Kaggle/Colab GPUs, has no session limits, and the 11 GB dataset is already on disk. PyTorch comes from the CUDA 13.2 index (`[tool.uv.sources]` in `pyproject.toml`). Kaggle/Colab remain a fallback.
 3. Do you have your own scanned Arabic documents to use as a real test set?
-4. GUI language: Arabic + English from v1, or English first?
+4. ~~GUI language~~: decided 2026-11-15 (M5): Arabic + English from v1, switchable in the app; the window is mirrored for Arabic.

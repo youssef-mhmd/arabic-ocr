@@ -47,9 +47,16 @@ jobs:
         if: matrix.name == 'linux'
         run: |
           apt-get update
+          # The system libraries Qt's display plugins (X11, Wayland) use: present
+          # here so build.py can find, with ldd, which packages the .deb must depend on.
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             ca-certificates git binutils dpkg-dev \
-            libegl1 libgl1 libfontconfig1 libxkbcommon0 libdbus-1-3 libglib2.0-0
+            libegl1 libgl1 libopengl0 libfontconfig1 libfreetype6 libdbus-1-3 libglib2.0-0 \
+            libxkbcommon0 libxkbcommon-x11-0 libx11-6 libx11-xcb1 libxcb1 libxcb-cursor0 \
+            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 \
+            libxcb-shape0 libxcb-util1 libxcb-xkb1 libxcb-xinerama0 libxcb-xinput0 \
+            libxcb-sync1 libxcb-xfixes0 libxcb-shm0 libxcb-render0 libxcb-glx0 \
+            libwayland-client0 libwayland-cursor0 libwayland-egl1 libdrm2 libgbm1
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v7
       - name: Inno Setup

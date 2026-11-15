@@ -605,6 +605,8 @@ class MainWindow(QMainWindow):
         selection.format.setBackground(color)
         selection.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
         cursor = QTextCursor(self.text.document().findBlockByNumber(number))
+        # the whole line, also when it wraps onto several rows of the text box
+        cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
         selection.cursor = cursor
         self.text.setExtraSelections([selection])
 

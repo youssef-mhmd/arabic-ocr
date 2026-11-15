@@ -111,10 +111,12 @@ STRINGS: dict[str, dict[str, str]] = {
     "about_text": {
         "en": "<b>Arabic OCR</b> {version}<br>Reads Arabic, Persian and Urdu text from "
         "images and PDFs. Works offline; nothing leaves this computer.<br>"
-        "Apache-2.0 license. Built with Qt (LGPL) and ONNX Runtime.",
+        "Code: Apache-2.0. Models: CC BY-SA 4.0, trained on Wikipedia and Wikisource "
+        "text. Built with Qt (LGPL) and ONNX Runtime.",
         "ar": "<b>القارئ العربي</b> {version}<br>يقرأ النصوص العربية والفارسية والأردية "
         "من الصور وملفات PDF. يعمل دون اتصال بالإنترنت، ولا يغادر أي شيء هذا الجهاز.<br>"
-        "رخصة Apache-2.0. مبني بـ Qt (LGPL) و ONNX Runtime.",
+        "الشيفرة: Apache-2.0. النماذج: CC BY-SA 4.0، دُرّبت على نصوص ويكيبيديا "
+        "وويكي مصدر. مبني بـ Qt (LGPL) و ONNX Runtime.",
     },
 }
 

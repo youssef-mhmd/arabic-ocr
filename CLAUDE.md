@@ -15,12 +15,12 @@ arabic-ocr is an Arabic-script OCR engine built from scratch: we design and trai
 - **Python, managed with uv only.** Use `uv add`, `uv run`, `uv sync`. Never use pip, poetry, conda, or requirements.txt.
 - Training: **PyTorch** (`train` dependency group). Shipped runtime: **ONNX Runtime**. The `arabic_ocr` runtime package must **never import torch**.
 - Images: OpenCV, NumPy, Pillow. Arabic rendering: **uharfbuzz + freetype-py**. Never render Arabic text without HarfBuzz shaping. Corpus Parquet files: pyarrow (`data` group).
-- PDF: pypdfium2 (read), pikepdf (write). CLI: Typer. API: FastAPI. GUI: PySide6. Packaging: PyInstaller via GitHub Actions.
+- PDF: pypdfium2 (read), pikepdf (write). CLI: Typer. API: FastAPI. GUI: PySide6 (`gui` extra, `pyside6-essentials`). Packaging: PyInstaller + Inno Setup (Windows) / hdiutil (macOS) / dpkg-deb (Linux), built and tested by GitHub Actions (`installers/`, `.github/workflows/release.yml`).
 - Tests: pytest. Lint/format: ruff.
 
 ## Commands
 ```bash
-uv sync                      # install deps (runtime + dev + data generation)
+uv sync --extra gui          # install deps (runtime + desktop app + dev + data generation)
 uv sync --group train        # + training deps (CUDA PyTorch, ~3 GB; see [tool.uv.sources])
 uv run --group train python -m training.<script>   # anything that imports torch
 uv run python -m training.download_fonts      # fetch training fonts into data/fonts/
@@ -32,11 +32,14 @@ uv run python -m training.inspect_samples -n 200 --dataset data/datasets/v1   # 
 uv run pytest                # tests
 uv run ruff check . && uv run ruff format .
 uv run arabic-ocr <file>     # run the OCR CLI
+uv run arabic-ocr-gui        # run the desktop app
+uv sync --extra gui --group build && uv run python -m installers.build   # installer for this OS
 ```
 
 ## Layout
 ```
 src/arabic_ocr/    runtime package (charset, preprocess, detect/, recognize/, layout, pipeline, export/, cli, api, gui/)
+installers/        PyInstaller spec, installer build script, Inno Setup script, icons
 training/          data generation, training, evaluation, ONNX export (may import torch)
 data/              git-ignored corpora, fonts, generated datasets; data/LICENSES.md is tracked
 models/            released .onnx files
@@ -56,8 +59,9 @@ docs/              PRD, milestones, learning notes
 - Use `pathlib` everywhere; no hard-coded separators or OS-specific paths.
 - Always open text files with `encoding="utf-8"`. Windows defaults to a different encoding.
 - No shell-specific scripts in the main workflow. Write helper scripts in Python and run them with `uv run`.
-- Every dependency must ship wheels for Windows, macOS (x86-64 + arm64), and Linux.
+- Every dependency must ship wheels for Windows x64, macOS arm64 (macOS 14+) and Linux x86-64 (glibc 2.35, Ubuntu 22.04). Intel Macs are not supported.
 - CI must pass on all 3 OSes.
+- GUI: connect Qt signals to methods, never to lambdas that use `self` (crash on exit). Tests run Qt "offscreen".
 
 ## Data and licensing
 - Every corpus, dataset, and font gets an entry in `data/LICENSES.md` before it is used.

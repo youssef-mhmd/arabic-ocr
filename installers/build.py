@@ -180,14 +180,51 @@ def package_macos() -> Path:
     return out
 
 
-#: System libraries Qt needs on Linux that a fresh Ubuntu may not have.
-DEB_DEPENDS = [
-    "libc6 (>= 2.35)", "libegl1", "libgl1", "libfontconfig1", "libfreetype6",
-    "libxkbcommon0", "libxkbcommon-x11-0", "libdbus-1-3", "libglib2.0-0",
-    "libxcb-cursor0", "libxcb-icccm4", "libxcb-image0", "libxcb-keysyms1",
-    "libxcb-randr0", "libxcb-render-util0", "libxcb-shape0", "libxcb-xinerama0",
-    "libxcb-xkb1",
-]  # fmt: skip
+def linux_depends(folder: Path) -> list[str]:
+    """The Ubuntu packages that provide the system libraries the app links to.
+
+    The bundle leaves system libraries out (arabic-ocr.spec). Here `ldd` lists
+    what every program, library and Qt plugin in it needs from the system, and
+    `dpkg -S` names the package each of those files comes from. Those become
+    the .deb's dependencies, so `apt install` adds whatever a computer lacks.
+    """
+    internal = folder / "_internal"
+    env = {**os.environ, "LD_LIBRARY_PATH": str(internal)}  # as the app runs
+    needed: set[str] = set()
+    missing: set[str] = set()
+    for f in folder.rglob("*"):
+        if f.is_symlink() or not f.is_file() or f.read_bytes()[:4] != b"\x7fELF":
+            continue
+        out = subprocess.run(["ldd", str(f)], capture_output=True, text=True, env=env).stdout
+        for line in out.splitlines():
+            name, _, target = line.strip().partition(" => ")
+            if target.startswith("not found"):
+                missing.add(f"{name} (needed by {f.relative_to(folder)})")
+            elif target.startswith("/"):
+                path = target.split(" (")[0]
+                if not Path(path).resolve().is_relative_to(folder.resolve()):
+                    needed.add(path)
+    if missing:
+        raise SystemExit(
+            "Libraries not found on this build machine; install them first:\n  "
+            + "\n  ".join(sorted(missing))
+        )
+    packages = {"libc6"}
+    for path in sorted(needed):
+        # Ubuntu's /lib is a link to /usr/lib; dpkg knows a file by one of them
+        other = path.replace("/usr/lib/", "/lib/", 1)
+        if other == path:
+            other = path.replace("/lib/", "/usr/lib/", 1)
+        for c in (path, other):
+            r = subprocess.run(["dpkg", "-S", c], capture_output=True, text=True)
+            if r.returncode == 0:
+                packages.add(r.stdout.split(":")[0].strip())
+                break
+        else:
+            raise SystemExit(f"No package provides {path}")
+    print("Depends:", ", ".join(sorted(packages)))
+    return [p if p != "libc6" else "libc6 (>= 2.35)" for p in sorted(packages)]
+
 
 DESKTOP = """[Desktop Entry]
 Type=Application
@@ -205,6 +242,7 @@ MimeType=image/png;image/jpeg;image/tiff;image/bmp;image/webp;application/pdf;
 
 def package_linux() -> Path:
     out = DIST / f"arabic-ocr_{VERSION}_amd64.deb"
+    depends = linux_depends(app_dir())
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp) / "pkg"
         shutil.copytree(app_dir(), root / "opt" / "arabic-ocr", symlinks=True)
@@ -224,7 +262,7 @@ def package_linux() -> Path:
         control.write_text(
             f"Package: arabic-ocr\nVersion: {VERSION}\nArchitecture: amd64\n"
             "Maintainer: arabic-ocr <https://github.com/youssef-mhmd/arabic-ocr>\n"
-            f"Installed-Size: {size_kb}\nDepends: {', '.join(DEB_DEPENDS)}\n"
+            f"Installed-Size: {size_kb}\nDepends: {', '.join(depends)}\n"
             "Section: graphics\nPriority: optional\n"
             "Homepage: https://github.com/youssef-mhmd/arabic-ocr\n"
             "Description: Offline OCR for Arabic-script text\n"
@@ -241,7 +279,8 @@ def _folder() -> Path:
 
 
 def _folder_mb() -> float:
-    return sum(f.stat().st_size for f in _folder().rglob("*") if f.is_file()) / 1e6
+    files = (f for f in _folder().rglob("*") if f.is_file() and not f.is_symlink())
+    return sum(f.stat().st_size for f in files) / 1e6
 
 
 def report_size(top: int = 20) -> None:

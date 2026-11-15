@@ -1,0 +1,37 @@
+arabic-ocr
+https://github.com/youssef-mhmd/arabic-ocr
+
+Source code: Apache License 2.0 (see LICENSE).
+
+MODELS
+------
+The models (detector-v2.onnx, recognizer-v6b-int8.onnx) are released under the
+Creative Commons Attribution-ShareAlike 4.0 International license (CC BY-SA 4.0),
+https://creativecommons.org/licenses/by-sa/4.0/
+
+They were trained on images rendered from, and real scans transcribed by:
+- Arabic, Persian and Urdu Wikipedia, by Wikipedia contributors (CC BY-SA 4.0),
+  https://www.wikipedia.org
+- Arabic, Persian and Urdu Wikisource, by Wikisource contributors (CC BY-SA 4.0),
+  https://wikisource.org; scans of public-domain books from Wikimedia Commons
+- The Tanzil Quran text, Copyright (C) 2007-2025 Tanzil Project, CC BY 3.0,
+  https://tanzil.net
+- Fonts under the SIL Open Font License 1.1 (used for rendering only; no font is
+  included in this software)
+
+Details: data/LICENSES.md in the source repository.
+
+THIRD-PARTY SOFTWARE IN THE INSTALLERS
+--------------------------------------
+- Python, PSF License
+- Qt 6 and PySide6, GNU LGPL 3.0 (https://www.qt.io, https://wiki.qt.io/Qt_for_Python).
+  The Qt libraries are separate files in the installed app and can be replaced;
+  their source code is available from https://download.qt.io
+- ONNX Runtime, MIT License
+- OpenCV, Apache License 2.0
+- NumPy, BSD License
+- Pillow, MIT-CMU License
+- pypdfium2 and PDFium, Apache 2.0 / BSD
+- pikepdf, MPL 2.0; QPDF, Apache 2.0
+- fontTools, MIT License
+- Typer, FastAPI, Starlette, Pydantic, Uvicorn, MIT / BSD licenses
