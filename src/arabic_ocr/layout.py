@@ -45,6 +45,10 @@ MIN_BESIDE = 0.3
 SHORT_LINE = 2.0
 #: A line is indented (first line of a paragraph) by at least this many line heights.
 INDENT = 1.0
+#: Verse (see is_verse): the two half-lines of a row are offset by at most this many
+#: line heights (median), and are at most this many line heights wide.
+VERSE_MAX_OFFSET = 0.07
+VERSE_MAX_WIDTH = 10.0
 
 
 def row_order(boxes: Sequence[Box], idx: list[int]) -> list[int]:
@@ -156,7 +160,51 @@ def find_gutter(boxes: Sequence[Box], idx: list[int], h: float) -> float | None:
     )
     if beside < MIN_BESIDE * len(small):
         return None
+    if is_verse(boxes, right, left):
+        return None  # read row by row instead
     return x
+
+
+def is_verse(boxes: Sequence[Box], right: list[int], left: list[int]) -> bool:
+    """True if two "columns" are really the two half-lines of verse (Persian and
+    Arabic poetry print each verse as a row: first half right, second half left).
+
+    Verse: almost every line has a partner at the same height across the gap, both
+    sides have about as many lines, and (unlike prose columns, whose paragraphs end
+    in short lines) almost no line is short.
+    """
+    small, big = sorted((right, left), key=len)
+    if len(small) < 4 or len(big) > 1.2 * len(small):
+        return False
+
+    def partnered(i: int) -> bool:
+        y0, y1 = boxes[i][1], boxes[i][3]
+        return any(
+            min(y1, boxes[j][3]) - max(y0, boxes[j][1])
+            > 0.6 * min(y1 - y0, boxes[j][3] - boxes[j][1])
+            for j in big
+        )
+
+    if sum(partnered(i) for i in small) < 0.9 * len(small):
+        return False
+    # The two halves of a verse share a baseline almost exactly, and are short.
+    # Measured: verse rows are offset by 0.03-0.06 line heights (median) and
+    # 7-8 line heights wide; prose columns drift by 0.08-0.29 and are 8-14 wide.
+    h = float(np.median([boxes[i][3] - boxes[i][1] for i in right + left]))
+
+    def mid(i: int) -> float:
+        return (boxes[i][1] + boxes[i][3]) / 2
+
+    offset = np.median([min(abs(mid(i) - mid(j)) for j in big) for i in small]) / h
+    width = np.median([boxes[i][2] - boxes[i][0] for i in right + left]) / h
+    if offset > VERSE_MAX_OFFSET or width > VERSE_MAX_WIDTH:
+        return False
+    for side in (right, left):
+        widths = [boxes[i][2] - boxes[i][0] for i in side]
+        full = max(widths)
+        if sum(w < 0.7 * full for w in widths) > 0.1 * len(side):
+            return False  # short lines: paragraphs, so prose columns
+    return True
 
 
 def _order(boxes: Sequence[Box], idx: list[int], h: float) -> list[list[int]]:

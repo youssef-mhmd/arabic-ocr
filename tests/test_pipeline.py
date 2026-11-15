@@ -307,3 +307,20 @@ def test_remove_rules_keeps_letters_and_shadows():
     assert out[300, 31] > 150  # frame painted with the paper colour
     assert out[120, 202] == 20  # the letter stays
     assert abs(int(out[400, 100]) - 170) <= 2  # the shadow is not "ink"
+
+
+def test_verse_is_read_row_by_row():
+    # 6 verses: right half-line then left half-line on exactly the same baseline
+    boxes = []
+    for r in range(6):
+        y = r * 40
+        boxes += [(330, y, 560, y + 25), (40, y, 270, y + 25)]  # right half, left half
+    assert [i for b in reading_order(boxes) for i in b] == list(range(12))
+
+
+def test_prose_columns_with_drifting_rows_stay_columns():
+    # two columns whose rows don't line up exactly (paragraph gaps differ)
+    right = [(330, y, 560, y + 25) for y in (0, 40, 80, 120, 160, 200)]
+    left = [(40, y + 13, 270, y + 38) for y in (0, 40, 80, 120, 160, 200)]
+    flat = [i for b in reading_order(right + left) for i in b]
+    assert flat == list(range(12))  # whole right column first, then the left one

@@ -95,3 +95,9 @@ Rule kept throughout: never ship a faster model without re-measuring accuracy on
 The best way to close the gap to real (especially old) print is to train on real lines. `training/make_real_lines.py` does this from proofread Wikisource scans: run our OCR on a page, match each found line to the transcription line it reads most like, and keep clear matches with the human-checked text as the label.
 
 It works (e.g. 15 of 17 lines kept on a page of «كليلة ودمنة»), but after a few thousand requests Wikimedia refused further downloads: its **User-Agent policy** requires automated clients to identify themselves with a contact address (e-mail or web page). Collection is paused until the project has such a contact to put there.
+
+## 9. Verse layout
+
+Persian and Arabic poetry is printed as rows of two half-lines (right half first). The column finder saw two columns and read all right halves, then all left halves; on the Shahnameh and Masnavi pages that made the page text 48–55% "wrong" although most words were read correctly. `layout.is_verse` now recognises verse: almost every line has a partner across the gap, both sides have as many lines, almost no line ends short, the two halves share a baseline almost exactly (median offset ≤ 0.07 line heights), and half-lines are short (≤ 10 line heights). Verse is then read row by row.
+
+The baseline test was found by measuring: a first version without it also turned 5 of 20 synthetic two-column *prose* pages into "verse" (their rows drift by 0.08–0.29 line heights; verse rows by 0.03–0.06). Result: Persian naskh pages 19.2% → 10.1% CER; everything else unchanged, including two-column reading order.
