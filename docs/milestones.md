@@ -98,7 +98,7 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 - [x] Layout analysis: blocks, multi-column detection (RTL column order), paragraphs, noise removal
 - [x] Input: PNG/JPEG/TIFF (multi-page)/BMP/WebP; PDF via pypdfium2 at 300 DPI; batch folders/globs
 - [x] Exporters: txt, JSON, **searchable PDF** (pikepdf invisible text layer), **hOCR**, **ALTO XML**
-- [ ] Check the searchable PDF: text is selectable and searchable in common PDF viewers, Arabic copies correctly
+- [x] Check the searchable PDF: text is selectable and searchable in common PDF viewers, Arabic copies correctly *(Chrome/PDFium and MuPDF checked by script; desktop viewer checked by the owner on 2026-11-15: search finds Arabic words)*
 - [x] Public library API: `OCR().read(path_or_image)` → typed result objects; docstrings
 - [x] Local HTTP API: `arabic-ocr serve` (FastAPI, binds to 127.0.0.1 by default), `POST /ocr`
 - [x] Optional lexicon/word-list correction in postprocessing *(opt-in `--correct-words`: ~2% fewer errors, see correct.py)*
@@ -107,7 +107,9 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Exit criteria:** every v1 accuracy target in PRD §9 is met. All output formats pass tests on all 3 OSes.
 
-**Status (2026-11-15, end of day):** 10 of 11 items done; open: viewer check of the searchable PDF (owner). Accuracy (CER no diacritics, detector-v2 + recognizer-v6b; PRD §9 as clarified by the owner): Arabic printed 1.40% ✅, with diacritics 1.50% ✅; screenshots (UI fonts) 0.85% ✅; Persian modern print 3.07% (scans) / 0.18% (digital) ✅; Urdu modern print 0.27% (digital) ✅. Stress tests: Persian old/verse pages 10-21%, Urdu 1920s book 33.9%, rare screenshot fonts ~10%. Speed: A4 1.54 s ✅, screenshot 0.60 s (NFR-3 0.5 s). CI on 3 OSes: waiting for the GitHub repository (owner).
+✅ **Met 2026-11-15.** All 11 items done. CI run #1 on GitHub (commit `229e782`) is green: lint + tests on `windows-latest`, `macos-latest` and `ubuntu-latest`, including the txt/JSON/searchable-PDF/hOCR/ALTO tests. Known gap carried to M5: one screenshot takes 0.60 s (NFR-3 says 0.5 s).
+
+**Final numbers:** Accuracy (CER no diacritics, detector-v2 + recognizer-v6b; PRD §9 as clarified by the owner): Arabic printed 1.40% ✅, with diacritics 1.50% ✅; screenshots (UI fonts) 0.85% ✅; Persian modern print 3.07% (scans) / 0.18% (digital) ✅; Urdu modern print 0.27% (digital) ✅. Stress tests: Persian old/verse pages 10-21%, Urdu 1920s book 33.9%, rare screenshot fonts ~10%. Speed: A4 1.54 s ✅, screenshot 0.60 s (NFR-3 0.5 s).
 
 ---
 
