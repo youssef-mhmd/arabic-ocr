@@ -117,16 +117,18 @@ Derived from [PRD.md](PRD.md). Each milestone produces something that works and 
 
 **Goal:** non-technical users can install and use it.
 
-- [ ] PySide6 GUI: open/drag-and-drop/paste from clipboard; side-by-side image and text; line boxes highlighted; edit text; copy; export in any format
-- [ ] Settings: diacritics on/off, digit style, output folder
-- [ ] UI languages: Arabic (RTL) + English
-- [ ] Background processing with progress bar (UI never freezes); batch queue
-- [ ] PyInstaller builds via GitHub Actions: Windows `.exe`/installer, macOS `.dmg` (Intel + Apple Silicon), Linux `.AppImage`/`.deb`
-- [ ] Test on clean machines/VMs with no Python installed
-- [ ] User docs: install guide per OS, CLI reference, library/API reference
-- [ ] Publish models + release on GitHub with checksums
+- [x] PySide6 GUI: open/drag-and-drop/paste from clipboard; side-by-side image and text; line boxes highlighted; edit text; copy; export in any format *(`src/arabic_ocr/gui/`; click a box to jump to its text and back; edits are used by every export)*
+- [x] Settings: diacritics on/off, digits style, output folder *(also tatweel, export format, language; applied instantly to all results)*
+- [x] UI languages: Arabic (RTL) + English *(switch from the toolbar; the window is mirrored for Arabic)*
+- [x] Background processing with progress bar (UI never freezes); batch queue *(one OCR thread, per-file progress, Cancel)*
+- [x] PyInstaller builds via GitHub Actions: Windows `.exe` installer (Inno Setup), macOS `.dmg` (Apple Silicon; Intel Macs dropped by the owner), Linux `.deb` *(`installers/`, `.github/workflows/release.yml`)*
+- [x] Test on clean machines/VMs with no Python installed *(release workflow installs each package and runs the app's `--self-test`: fresh Ubuntu 22.04 and 24.04 containers with no Python and a real X11 display; a Windows runner with Python removed from PATH, including uninstall; macOS 15 and 26 runners)*
+- [x] User docs: install guide per OS, CLI reference, library/API reference *(`docs/install.md`, `docs/cli.md`, `docs/library.md`)*
+- [x] Publish models + release on GitHub with checksums *(the release workflow attaches the installers, both `.onnx` models and `SHA256SUMS.txt`; models CC BY-SA 4.0, see `NOTICE`)*
 
-**Exit criteria:** **v1.0 tagged.** The installers work on clean Windows 10/11, macOS 12+, and Ubuntu 22.04 machines; installers are ≤ 250 MB.
+**Exit criteria:** **v1.0 tagged.** The installers work on clean Windows 10/11, macOS 14+ (Apple Silicon), and Ubuntu 22.04 machines; installers are ≤ 250 MB.
+
+**Status (2026-11-15):** all items done. Installers 110 MB (Windows), 170 MB (macOS), 151 MB (Linux), all ≤ 250 MB ✅. Clean-machine tests pass on all three systems ✅. Platform changes (PRD §9 note 3): macOS 14+ on Apple Silicon only (dependencies need macOS 14; Intel Macs dropped by the owner). Gaps: installers are unsigned (SmartScreen/Gatekeeper warn on first start); macOS 14 itself is untested because GitHub retired its macOS 14 machines on 2026-11-02; the Windows test machine is Windows Server with Python hidden, not a fresh Windows 10/11.
 
 ---
 

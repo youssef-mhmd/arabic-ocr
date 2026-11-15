@@ -1,6 +1,6 @@
 [project]
 name = "arabic-ocr"
-version = "0.1.0"
+version = "1.0.0"
 description = "Offline, cross-platform OCR engine for Arabic-script text."
 readme = "README.md"
 license = "Apache-2.0"
