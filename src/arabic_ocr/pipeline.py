@@ -48,7 +48,7 @@ _REPO_MODELS = Path(__file__).resolve().parents[2] / "models"
 MODELS_DIR = Path(os.environ.get("ARABIC_OCR_MODELS", _REPO_MODELS))
 DETECTOR = "detector-v2.onnx"
 #: Convolutions in int8 (training/quantize.py): ~1.8x faster on CPU, same CER.
-RECOGNIZER = "recognizer-v5-int8.onnx"
+RECOGNIZER = "recognizer-v6b-int8.onnx"
 LEXICON = "lexicon.tsv.gz"  # optional word list (training/make_lexicon.py)
 
 #: Margin added around a detected line before reading it, as a fraction of the

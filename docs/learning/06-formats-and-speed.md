@@ -101,3 +101,22 @@ It works (e.g. 15 of 17 lines kept on a page of «كليلة ودمنة»), but 
 Persian and Arabic poetry is printed as rows of two half-lines (right half first). The column finder saw two columns and read all right halves, then all left halves; on the Shahnameh and Masnavi pages that made the page text 48–55% "wrong" although most words were read correctly. `layout.is_verse` now recognises verse: almost every line has a partner across the gap, both sides have as many lines, almost no line ends short, the two halves share a baseline almost exactly (median offset ≤ 0.07 line heights), and half-lines are short (≤ 10 line heights). Verse is then read row by row.
 
 The baseline test was found by measuring: a first version without it also turned 5 of 20 synthetic two-column *prose* pages into "verse" (their rows drift by 0.08–0.29 line heights; verse rows by 0.03–0.06). Result: Persian naskh pages 19.2% → 10.1% CER; everything else unchanged, including two-column reading order.
+
+## 10. Fine-tuning on real lines: the label-end trap
+
+`training/make_real_lines.py` collected 18,592 real training lines (Arabic 9,265, Persian 9,323; Urdu only 4: its few non-test books are Nastaliq) from 267 Wikisource books, none of them in a test set. Recognizer-v6 was fine-tuned from v5 on these (repeated 4×) plus 200k synthetic lines.
+
+v6 improved Persian (10.1% → 6.0%) and Urdu (35.6% → 29.1%) but made **Arabic printed pages twice as bad** (1.77% → 3.41%): it invented text at the *ends* of lines ("على وجه" → "على وا الا"). The cause was label noise. A printed line and a transcription line were accepted as a match at up to 30% CER, which also happens when the transcriber broke the line one word earlier or later than the print. Then the image and the label disagree exactly at the line end, and the model learns to make something up there. 41% of the lines had first or last words that disagreed with v5's reading.
+
+`make_real_lines --clean` keeps a line only if v5 reads it within 20% CER *and* its first and last words agree (58% kept). Recognizer-v6b, trained on those, is better than v5 on every page-level set:
+
+| real pages, CER (no diacritics) | v5 | v6 | **v6b** |
+|---|---|---|---|
+| Arabic printed (60) | 1.77% | 3.41% | **1.40%** |
+| Persian naskh (32) | 10.1% | 6.0% | **6.8%** |
+| Urdu naskh (11) | 35.6% | 29.1% | **33.9%** |
+| screenshots, UI fonts (100) | 0.91% | 0.93% | **0.85%** |
+
+One line set got worse: the older OpenITI *dev* lines (4.91% → 5.77%), while its *held-out* sister set improved (2.92% → 2.87%). v6b (int8) is the default model.
+
+Lesson: with automatically matched labels, check the *edges* of each sample, not only the overall match.
